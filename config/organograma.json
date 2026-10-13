@@ -256,6 +256,16 @@
       "email": "vendas31@dellamed.com.br"
     },
     {
+      "id": "tabita-danieli-borges",
+      "nome": "Tabita Danieli Borges",
+      "papel": "vendedor",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Lobão",
+      "acesso": "propria",
+      "email": "",
+      "obs": "Saiu da empresa; carteira será repassada a outro vendedor."
+    },
+    {
       "id": "talyta-luane-rosa",
       "nome": "Talyta Luane Rosa",
       "papel": "sdr",
