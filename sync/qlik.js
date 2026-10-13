@@ -223,7 +223,7 @@ async function discoverApp(cfg, log = console.log){
     const sheets = (await listObj({ qInfo: { qType: "SheetList" }, qAppObjectListDef: { qType: "sheet",
       qData: { title: "/qMetaDef/title", cells: "/cells" } } })).qAppObjectList.qItems;
     log("Pastas:", sheets.map(sh => sh.qData.title).join(" | "));
-    for(const sh of sheets.filter(x => /pedido/i.test(x.qData.title || ""))){
+    for(const sh of sheets.filter(x => /lista de clientes|^pedidos$/i.test(x.qData.title || ""))){
       log(`Pasta "${sh.qData.title}" (${sh.qInfo.qId}): ${(sh.qData.cells || []).length} objetos`);
       for(const c of sh.qData.cells || []){
         try{
