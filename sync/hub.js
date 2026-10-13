@@ -48,6 +48,11 @@ function mapaDePessoas(pessoasDocs){
   pessoasDocs.forEach(p => { [p.nome].concat(p.alias || []).forEach(n => { if(n) m.set(L.norm(n), p.id); }); });
   // O id do organograma segue a grafia do Qlik (ex.: "jessica-soares-porto"): vale como apelido também.
   pessoasDocs.forEach(p => { const n = L.norm(String(p.id || "").replace(/-/g, " ")); if(n && !m.has(n)) m.set(n, p.id); });
+  // Quem tem "campo": "prospect" no organograma tem a carteira lida da coluna Prospect (Z5).
+  m.prospect = new Map();
+  pessoasDocs.filter(p => p.campo === "prospect").forEach(p => {
+    [p.nome, String(p.id || "").replace(/-/g, " ")].concat(p.alias || []).forEach(n => { if(n) m.prospect.set(L.norm(n), p.id); });
+  });
   return m;
 }
 // A carteira de cada pessoa do organograma (vendedores e líderes) é a dos clientes em que ela é o
@@ -72,9 +77,15 @@ function mapClientes({ headers, rows }, columnMap, apelidos = new Map()){
     const vendInterno = r.vendInt || (r.tipoRep != null ? r.rep : null);
     if(vistos.has(String(r.cod).trim())) continue;
     const achado = vendInterno && apelidos.has(L.norm(vendInterno)) ? vendInterno : null;
-    if(!achado){ foraDoOrganograma++; const n = vendInterno || "(sem vendedor interno)"; foraNomes.set(n, (foraNomes.get(n) || 0) + 1); continue; }
+    // Sem vendedor interno do organograma: vale o Prospect (Z5) de quem tem "campo": "prospect".
+    const viaProspect = !achado && r.prospect && apelidos.prospect ? apelidos.prospect.get(L.norm(r.prospect)) : null;
+    if(!achado && !viaProspect){
+      foraDoOrganograma++; const n = vendInterno || "(sem vendedor interno)"; foraNomes.set(n, (foraNomes.get(n) || 0) + 1);
+      if(r.prospect){ const z = "Z5 " + r.prospect; foraNomes.set(z, (foraNomes.get(z) || 0) + 1); }
+      continue;
+    }
     vistos.add(String(r.cod).trim());
-    const vendId = apelidos.get(L.norm(achado));
+    const vendId = viaProspect || apelidos.get(L.norm(achado));
     pessoas.set(vendId, (pessoas.get(vendId) || 0) + 1);
     const inadSim = /^s(im)?$/i.test(String(r.inad || "").trim());
     clientes.push({
