@@ -75,7 +75,10 @@ async function main(){
   try{
     const tabela = await fetchTable(cfg.qlik, log);
     // Organograma = arquivo config/organograma.json + quem a gestão cadastrou ou ajustou pela página.
-    const pessoasHub = db ? (await db.collection("hub_pessoas").get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.origem !== "qlik") : [];
+    // O arquivo do organograma completa o que estiver no banco (apelidos e "campo"), sem desfazer o que a gestão ajustou na página.
+    const porId = new Map(ORGANOGRAMA.map(p => [p.id, p]));
+    const pessoasHub = (db ? (await db.collection("hub_pessoas").get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.origem !== "qlik") : [])
+      .map(p => { const o = porId.get(p.id); return o ? { ...p, campo: p.campo || o.campo, alias: [...new Set([].concat(p.alias || [], o.alias || []))] } : p; });
     const ids = new Set(pessoasHub.map(p => p.id));
     const equipe = pessoasHub.concat(ORGANOGRAMA.filter(p => !ids.has(p.id)));
     const { clientes, porPessoa, unmapped, ignorados, foraDoOrganograma, foraNomes } = mapClientes(tabela, cfg.columnMap, mapaDePessoas(equipe));
