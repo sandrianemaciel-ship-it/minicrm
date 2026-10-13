@@ -46,6 +46,8 @@ const docIdCod = cod => String(cod).trim().replace(/\//g, "-");
 function mapaDePessoas(pessoasDocs){
   const m = new Map();
   pessoasDocs.forEach(p => { [p.nome].concat(p.alias || []).forEach(n => { if(n) m.set(L.norm(n), p.id); }); });
+  // O id do organograma segue a grafia do Qlik (ex.: "jessica-soares-porto"): vale como apelido também.
+  pessoasDocs.forEach(p => { const n = L.norm(String(p.id || "").replace(/-/g, " ")); if(n && !m.has(n)) m.set(n, p.id); });
   return m;
 }
 // A carteira de cada pessoa do organograma (vendedores e líderes) é a dos clientes em que ela é o

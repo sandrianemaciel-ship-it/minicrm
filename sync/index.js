@@ -83,6 +83,7 @@ async function main(){
     log("Clientes por pessoa: " + equipe.map(p => `${p.nome} ${porPessoa.get(p.id) || 0}`).join(" · "));
     const semCarteira = equipe.filter(p => p.papel !== "gestor" && p.papel !== "sdr" && !porPessoa.get(p.id));
     if(semCarteira.length) log("Sem nenhum cliente no Qlik (confira se o nome bate com o Qlik e use \"alias\" no organograma): " + semCarteira.map(p => p.nome).join(", "));
+    if(foraNomes && foraNomes.size) log("Vendedores internos do Qlik fora do organograma (nome · clientes): " + [...foraNomes].sort((a, b) => b[1] - a[1]).slice(0, 80).map(([n, q]) => `${n} ${q}`).join(" · "));
     if(unmapped.length) log("Colunas do Qlik sem correspondência (ignoradas): " + unmapped.join(" | "));
     if(ignorados) log(`${ignorados} linhas sem Cód Cliente foram ignoradas.`);
     if(!clientes.length) throw new Error("Nenhum cliente das pessoas do organograma. Confira o QLIK_OBJECT_ID, as colunas Vendedor Interno / Representante e os nomes em config/organograma.json.");
