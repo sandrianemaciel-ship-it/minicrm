@@ -1,0 +1,16 @@
+rules_version = '2';
+// Regras do projeto Firebase do Hub Comercial (cole inteiro em Firestore Database › Regras › Publicar).
+// Igual à Pipeline de Retenção: quem tem o link da página lê e grava estas coleções.
+// O robô usa a chave da conta de serviço e não depende destas regras.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /hub_clientes/{id}  { allow read, write: if true; }
+    match /hub_leads/{id}     { allow read, write: if true; }
+    match /hub_pessoas/{id}   { allow read, write: if true; }
+    match /hub_config/{id}    { allow read, write: if true; }
+    match /hub_anexos/{id}    { allow read, write: if true; }
+    match /hub_presets/{id}   { allow read, write: if true; }
+    match /hub_historico/{id} { allow read, write: if true; }
+    match /hub_sync/{id}      { allow read: if true; }
+  }
+}
