@@ -1,0 +1,285 @@
+{
+  "_comentario": "Organograma comercial do Hub. acesso: total | equipe | propria. O id segue o nome como vem do Qlik; alias cobre outras grafias. Depois de editar aqui, aumente ORGANOGRAMA_V no index.html para a página regravar.",
+  "pessoas": [
+    {
+      "id": "rodrigo-velho",
+      "nome": "Rodrigo Velho",
+      "papel": "gestor",
+      "nivel": "Gerente",
+      "time": "Gerência Comercial",
+      "acesso": "total",
+      "email": "rodrigo.velho@dellamed.com.br"
+    },
+    {
+      "id": "marco-ribeiro",
+      "nome": "Marco Ribeiro (Lobão)",
+      "papel": "lider",
+      "nivel": "Supervisor",
+      "time": "Líder de Vendas Lobão",
+      "acesso": "total",
+      "email": "marco.ribeiro@dellamed.com.br",
+      "alias": [
+        "LOBAO",
+        "MARCO RIBEIRO"
+      ]
+    },
+    {
+      "id": "sandriane-maciel",
+      "nome": "Sandriane Maciel",
+      "papel": "lider",
+      "nivel": "Líder",
+      "time": "Líder de Vendas Sandriane",
+      "acesso": "total",
+      "email": "sandriane.maciel@dellamed.com.br"
+    },
+    {
+      "id": "stefany-da-rosa-brandao-saldanha",
+      "nome": "Stefany da Rosa Brandao Saldanha",
+      "papel": "vendedor",
+      "nivel": "Ouro",
+      "time": "Líder de Vendas Sandriane",
+      "acesso": "propria",
+      "email": "vendas11@dellamed.com.br"
+    },
+    {
+      "id": "heloisa-garcia-colling",
+      "nome": "Heloisa Garcia Colling",
+      "papel": "vendedor",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Sandriane",
+      "acesso": "propria",
+      "email": "vendas24@dellamed.com.br"
+    },
+    {
+      "id": "isadora-kimberly-da-costa",
+      "nome": "Isadora Kimberly da Costa",
+      "papel": "vendedor",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Sandriane",
+      "acesso": "propria",
+      "email": "vendas38@dellamed.com.br"
+    },
+    {
+      "id": "kelly-vieira-dos-santos",
+      "nome": "Kelly Vieira dos Santos",
+      "papel": "sdr",
+      "nivel": "Prata",
+      "time": "Líder de Vendas Sandriane",
+      "acesso": "propria",
+      "email": "vendas9@dellamed.com.br"
+    },
+    {
+      "id": "isabel-dominiak",
+      "nome": "Isabel Dominiak",
+      "papel": "sdr",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Sandriane",
+      "acesso": "propria",
+      "email": "vendas5@dellamed.com.br"
+    },
+    {
+      "id": "jessica-soares-porto",
+      "nome": "Jessica Porto",
+      "papel": "lider",
+      "nivel": "Líder",
+      "time": "Líder de Vendas Jessica",
+      "acesso": "equipe",
+      "email": "jessica.porto@dellamed.com.br",
+      "alias": [
+        "JESSICA PORTO"
+      ]
+    },
+    {
+      "id": "luana-ferreira-figueredo",
+      "nome": "Luana Ferreira Figueiredo",
+      "papel": "vendedor",
+      "nivel": "Ouro",
+      "time": "Líder de Vendas Jessica",
+      "acesso": "propria",
+      "email": "vendas1@dellamed.com.br",
+      "alias": [
+        "LUANA FERREIRA FIGUEIREDO"
+      ]
+    },
+    {
+      "id": "juliana-vieira-duarte-de-oliveira",
+      "nome": "Juliana Vieira Duarte de Oliveira",
+      "papel": "vendedor",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Jessica",
+      "acesso": "propria",
+      "email": "vendas27@dellamed.com.br"
+    },
+    {
+      "id": "nicole-azevedo",
+      "nome": "Nicole Azevedo",
+      "papel": "vendedor",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Jessica",
+      "acesso": "propria",
+      "email": "vendas6@dellamed.com.br"
+    },
+    {
+      "id": "estephany-victoria-camargo-luceiro",
+      "nome": "Esthephany Victoria Camargo Luceiro",
+      "papel": "sdr",
+      "nivel": "Prata",
+      "time": "Líder de Vendas Jessica",
+      "acesso": "propria",
+      "email": "vendas19@dellamed.com.br",
+      "alias": [
+        "ESTHEPHANY VICTORIA CAMARGO LUCEIRO"
+      ]
+    },
+    {
+      "id": "leonardo-de-vargas-dalpubel",
+      "nome": "Leonardo Dalpubel",
+      "papel": "lider",
+      "nivel": "Líder",
+      "time": "Líder de Vendas Leonardo",
+      "acesso": "equipe",
+      "email": "leonardo.dalpubel@dellamed.com.br",
+      "alias": [
+        "LEONARDO DALPUBEL"
+      ]
+    },
+    {
+      "id": "marseilly-alves-ferreira",
+      "nome": "Marseilly Alves Ferreira",
+      "papel": "vendedor",
+      "nivel": "Ouro",
+      "time": "Líder de Vendas Leonardo",
+      "acesso": "propria",
+      "email": "vendas22@dellamed.com.br"
+    },
+    {
+      "id": "rilari-antonia-da-silva-martins",
+      "nome": "Rilari Antonia da Silva Martins",
+      "papel": "vendedor",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Leonardo",
+      "acesso": "propria",
+      "email": "vendas8@dellamed.com.br"
+    },
+    {
+      "id": "artur-quadri-gettert",
+      "nome": "Artur Quadri Gettert",
+      "papel": "sdr",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Leonardo",
+      "acesso": "propria",
+      "email": "vendas29@dellamed.com.br"
+    },
+    {
+      "id": "fabio-junior-rodrigues",
+      "nome": "Fabio Junior Rodrigues",
+      "papel": "lider",
+      "nivel": "Líder",
+      "time": "Líder de Vendas Fabio",
+      "acesso": "equipe",
+      "email": "fabio.rodrigues@dellamed.com.br"
+    },
+    {
+      "id": "milena-da-silva",
+      "nome": "Milena da Silva",
+      "papel": "vendedor",
+      "nivel": "Ouro",
+      "time": "Líder de Vendas Fabio",
+      "acesso": "propria",
+      "email": "vendas16@dellamed.com.br"
+    },
+    {
+      "id": "lucas-prestes-de-souza",
+      "nome": "Lucas Prestes de Souza",
+      "papel": "vendedor",
+      "nivel": "Prata",
+      "time": "Líder de Vendas Fabio",
+      "acesso": "propria",
+      "email": "vendas12@dellamed.com.br"
+    },
+    {
+      "id": "thais-de-souza-portes",
+      "nome": "Thais de Souza Portes",
+      "papel": "vendedor",
+      "nivel": "Prata",
+      "time": "Líder de Vendas Fabio",
+      "acesso": "propria",
+      "email": "vendas30@dellamed.com.br"
+    },
+    {
+      "id": "nauany-de-olveira-rodrigues-de-olveira-rodrigues",
+      "nome": "Nauany de Olveira Rodrigues",
+      "papel": "sdr",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Fabio",
+      "acesso": "propria",
+      "email": "vendas14@dellamed.com.br"
+    },
+    {
+      "id": "matheus-rodrigues-sousa",
+      "nome": "Matheus Rodrigues Sousa",
+      "papel": "vendedor",
+      "nivel": "Ouro",
+      "time": "Líder de Vendas Lobão",
+      "acesso": "propria",
+      "email": "vendas23@dellamed.com.br"
+    },
+    {
+      "id": "maiara-boschetti",
+      "nome": "Maiara Boschetti",
+      "papel": "vendedor",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Lobão",
+      "acesso": "propria",
+      "email": "vendas13@dellamed.com.br"
+    },
+    {
+      "id": "maria-eduarda-de-vargas-walter",
+      "nome": "Maria Eduarda de Vargas Walter",
+      "papel": "vendedor",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Lobão",
+      "acesso": "propria",
+      "email": "vendas3@dellamed.com.br"
+    },
+    {
+      "id": "eduarda-radatz-da-silva",
+      "nome": "Eduarda Radatz da Silva",
+      "papel": "vendedor",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Lobão",
+      "acesso": "propria",
+      "email": "vendas31@dellamed.com.br"
+    },
+    {
+      "id": "talyta-luane-rosa",
+      "nome": "Talyta Luane Rosa",
+      "papel": "sdr",
+      "nivel": "Bronze",
+      "time": "Líder de Vendas Lobão",
+      "acesso": "propria",
+      "email": "vendas32@dellamed.com.br"
+    },
+    {
+      "id": "luisa-tiscoski-abreu",
+      "nome": "Luisa Abreu",
+      "papel": "lider",
+      "nivel": "Líder",
+      "time": "Líder de Vendas Luisa",
+      "acesso": "equipe",
+      "email": "luisa.abreu@dellamed.com.br",
+      "alias": [
+        "LUISA ABREU"
+      ]
+    },
+    {
+      "id": "lohrana-rodrigues-fernandes",
+      "nome": "Lohrana Rodrigues Fernandes",
+      "papel": "reativador",
+      "nivel": "Júnior",
+      "time": "Líder de Vendas Luisa",
+      "acesso": "propria",
+      "email": "vendas34@dellamed.com.br"
+    }
+  ]
+}

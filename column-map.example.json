@@ -1,0 +1,7 @@
+{
+  "_comentario": "Use só se algum nome de coluna da tabela do Qlik for diferente dos reconhecidos automaticamente. Renomeie para column-map.json (e, no GitHub, suba o arquivo). Chaves possíveis: cod, cli, cnpj, uf, cid, seg, tel, email, inad, valVenc, dtCad, dtUltFat, dtInat, statusErp, rep, vendInt, keyAcc, prospect, sucCli",
+  "Código do Cliente": "cod",
+  "Nome Cliente": "cli",
+  "Dt. Inativação Prevista": "dtInat",
+  "Vendedor Responsável": "vendInt"
+}
