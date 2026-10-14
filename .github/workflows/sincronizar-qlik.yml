@@ -7,6 +7,9 @@ on:
     # De hora em hora no horário comercial: 7h15 às 19h15 de Brasília, segunda a sexta
     # (o GitHub usa UTC: 10h15 às 22h15). Fora disso não há pedido novo e o robô não gasta a cota do Firebase.
     - cron: "15 10-22 * * 1-5"
+    # Dia 1 de cada mês às 7h15, mesmo em fim de semana: fecha o mês anterior e levanta a base fixa
+    # de clientes que inativam no mês (meta de recuperação de 70%).
+    - cron: "15 10 1 * *"
   workflow_dispatch: # botão "Run workflow" na aba Actions
     inputs:
       simular:
@@ -46,4 +49,6 @@ jobs:
           QLIK_REJECT_UNAUTHORIZED: ${{ vars.QLIK_REJECT_UNAUTHORIZED || 'true' }}
           # Pedidos ficam no mesmo app "Vendas Dellamed SAP"; a variável só é preciso se um dia mudarem de app.
           QLIK_PEDIDOS_APP_ID: ${{ vars.QLIK_PEDIDOS_APP_ID || secrets.QLIK_APP_ID }}
+          # Pipeline de Retenção (somente leitura): meses a copiar para o Hub. Variable PIPELINE_MESES muda a lista.
+          PIPELINE_MESES: ${{ vars.PIPELINE_MESES || '2026-09,2026-10' }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
