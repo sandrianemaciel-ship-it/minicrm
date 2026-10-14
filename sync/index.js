@@ -10,6 +10,7 @@ const path = require("path");
 const admin = require("firebase-admin");
 const { fetchTable, fetchPedidos, discoverApp } = require("./qlik");
 const { mapaDePessoas, mapClientes, syncClientes, syncPessoas, isoLocal, hoje } = require("./hub");
+const R = require("./risco");
 const ORGANOGRAMA = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "config", "organograma.json"), "utf8")).pessoas;
 
 const args = new Set(process.argv.slice(2));
@@ -43,12 +44,32 @@ function config(){
   return { qlik, columnMap, pedidosAppId: e.QLIK_PEDIDOS_APP_ID || null, serviceAccount: e.FIREBASE_SERVICE_ACCOUNT || "config/firebase-service-account.json" };
 }
 
+let CRED = null;
 function firestore(cfg){
   // No GitHub Actions a chave vem inteira no segredo FIREBASE_SERVICE_ACCOUNT_JSON;
   // na sua máquina, do arquivo apontado em FIREBASE_SERVICE_ACCOUNT.
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || fs.readFileSync(path.resolve(cfg.serviceAccount), "utf8");
-  admin.initializeApp({ credential: admin.credential.cert(JSON.parse(raw)) });
+  CRED = admin.credential.cert(JSON.parse(raw));
+  admin.initializeApp({ credential: CRED });
   return admin.firestore();
+}
+// Pipeline de Retenção: outro projeto Firebase. O robô do Hub só LÊ de lá (papel "Cloud Datastore Viewer"
+// dado à conta de serviço do Hub no projeto da Pipeline). Nada é gravado na Pipeline.
+async function lerPipelineSeLiberada(){
+  const projeto = (process.env.PIPELINE_PROJECT || "pipeline-dellamed").trim();
+  const meses = (process.env.PIPELINE_MESES || "2026-09,2026-10").split(",").map(x => x.trim()).filter(Boolean);
+  if(!CRED || !meses.length || projeto === "nenhum") return null;
+  try{
+    const app = admin.initializeApp({ credential: CRED, projectId: projeto }, "pipeline");
+    const fpipe = admin.firestore(app);
+    const dados = await R.lerPipeline(fpipe, meses, log);
+    log(`Pipeline de Retenção lida (somente leitura): ${Object.entries(dados).map(([mk, m]) => `${R.mkLabel(mk)} ${m.leads.length} clientes${m.fechado ? " · fechado" : ""}`).join(" · ") || "nenhum mês"}.`);
+    return { fpipe, dados };
+  }catch(e){
+    const semPermissao = /PERMISSION_DENIED|permission|7 /i.test(e.message || "");
+    log(semPermissao ? "Pipeline de Retenção: leitura ainda não liberada para o robô do Hub (falta o papel Cloud Datastore Viewer no projeto da Pipeline). Seguindo sem ela." : "Pipeline de Retenção não lida: " + e.message);
+    return null;
+  }
 }
 
 async function lerPedidos(cfg){
@@ -59,12 +80,14 @@ async function lerPedidos(cfg){
   const fimAnt = new Date(hj.getFullYear(), hj.getMonth(), 0);
   const q = { ...cfg.qlik, appId: cfg.pedidosAppId, objectId: null };
   const soma = lista => { const m = new Map(); lista.forEach(p => m.set(p.cod, (m.get(p.cod) || 0) + p.valor)); return m; };
-  const mes = soma(await fetchPedidos(q, isoLocal(iniMes), isoLocal(hj), log));
+  const agrupa = lista => { const m = new Map(); lista.forEach(p => { if(!m.has(p.cod)) m.set(p.cod, []); m.get(p.cod).push(p); }); return m; };
+  const listaMes = await fetchPedidos(q, isoLocal(iniMes), isoLocal(hj), log);
+  const mes = soma(listaMes);
   const ant = soma(await fetchPedidos(q, isoLocal(iniAnt), isoLocal(fimAnt), log));
   // Ticket médio: valor dos pedidos dos 3 meses fechados ÷ 3 ("Valor Total de Pedidos (- Canc)": cancelamentos já descontados).
   const iniTri = new Date(hj.getFullYear(), hj.getMonth() - 3, 1);
   const tri = soma(await fetchPedidos(q, isoLocal(iniTri), isoLocal(fimAnt), log));
-  return { mes, ant, tri };
+  return { mes, ant, tri, mesLista: agrupa(listaMes) };
 }
 
 async function main(){
@@ -95,7 +118,16 @@ async function main(){
     try{ pedidos = await lerPedidos(cfg); }catch(e){ log("Pedidos do Qlik não lidos (os filtros usarão a data do último faturamento): " + e.message); }
     if(!db){ log(`Simulação sem Firebase: ${clientes.length} clientes seriam enviados.`); return; }
     await syncPessoas(db, ORGANOGRAMA, { dry: DRY, log });
-    const cont = await syncClientes(db, clientes, { dry: DRY, log, pedidos });
+    const mk = isoLocal(hoje()).slice(0, 7);
+    const pipe = await lerPipelineSeLiberada();
+    // 1) Fecha o mês anterior (clientes que inativavam nele), antes de recalcular a carteira.
+    try{ await R.fecharMes(db, R.mesAnterior(mk), { dry: DRY, log, pedidosAnt: pedidos && pedidos.ant }); }catch(e){ log("Fechamento do mês anterior não concluído: " + e.message); }
+    // 2) Base fixa do mês (dia 1). No mês em que a Pipeline de Retenção ainda é usada, inclui os clientes que ela tem no mês.
+    const extra = pipe && pipe.dados[mk] ? new Set(pipe.dados[mk].leads.map(l => String(l.cod || "").trim())) : null;
+    const { set: base } = await R.garantirBase(db, mk, clientes, { dry: DRY, log, extraCods: extra, fonteExtra: "pipeline" });
+    const cont = await syncClientes(db, clientes, { dry: DRY, log, pedidos, base, mk });
+    // 3) Copia para o Hub o que a equipe preencheu na Pipeline de Retenção.
+    if(pipe){ try{ await R.importarPipeline(db, pipe.fpipe, pipe.dados, { dry: DRY, log, mkAtual: mk, clientes }); }catch(e){ log("Cópia da Pipeline de Retenção não concluída: " + e.message); } }
     if(!DRY) await db.doc("hub_sync/status").set({ ultimaSync: new Date().toISOString(), clientes: clientes.length, novos: cont.novos, atualizados: cont.atualizados, erro: null, mes: isoLocal(hoje()).slice(0, 7) }, { merge: true });
     log("Sincronização concluída.");
   }catch(err){

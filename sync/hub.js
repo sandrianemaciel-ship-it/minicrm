@@ -91,6 +91,7 @@ function mapClientes({ headers, rows }, columnMap, apelidos = new Map()){
     clientes.push({
       cod: String(r.cod).trim(), cli: r.cli || null, cnpj: r.cnpj || null, uf: r.uf || null, cid: r.cid || null,
       seg: r.seg || "Segmento Não Definido", tel: r.tel || null, email: r.email || null,
+      codGrupo: r.codGrupo ? String(r.codGrupo).trim() : null, grp: r.grp || null,
       inad: (r.valVenc || 0) > 0 ? r.valVenc : (inadSim ? 0.01 : 0),
       dtCad: r.dtCad || null, dtUltFat: r.dtUltFat || null, dtInat: r.dtInat || null,
       statusErp: r.statusErp || null, rep: r.tipoRep != null ? null : (r.rep || null), vendId
@@ -102,7 +103,7 @@ function mapClientes({ headers, rows }, columnMap, apelidos = new Map()){
 // ---------- gravação ----------
 // Campos que vêm do Qlik e são atualizados a cada sincronização. Todo o resto
 // (etapa, CRM, ofensor, proposta, agenda, histórico) é do vendedor e nunca é sobrescrito.
-const CAMPOS_QLIK = ["cod", "cli", "cnpj", "uf", "cid", "seg", "email", "inad", "dtCad", "dtUltFat", "dtInat", "statusErp", "rep"];
+const CAMPOS_QLIK = ["cod", "cli", "cnpj", "uf", "cid", "seg", "email", "inad", "dtCad", "dtUltFat", "dtInat", "statusErp", "rep", "codGrupo", "grp"];
 
 async function commitEmLotes(db, ops, dry){
   if(dry) return;
@@ -152,7 +153,15 @@ async function lerVarios(db, ids){
 }
 const trabalhado = c => (c.crm || []).length > 0 || (c.stage && c.stage !== "carteira") || c.origem === "prospeccao";
 
-async function syncClientes(db, clientes, { dry, log, pedidos }){
+// pedidoInfo: pedidos emitidos no mês para o cliente (mesma regra do "PEDIDO IDENTIFICADO" da Pipeline de Retenção).
+function pedidoInfo(lista){
+  const doMes = (lista || []).filter(p => p.valor > 0);
+  if(!doMes.length) return null;
+  return { pedidos: [...new Set(doMes.map(p => p.pedido))].sort(), valor: Math.round(doMes.reduce((s, p) => s + p.valor, 0) * 100) / 100, dtPrimeiro: doMes.map(p => p.data).sort()[0] || null };
+}
+// base: Set de códigos da base fixa do mês (clientes que inativam no mês, levantada no dia 1).
+// Quem está na base continua em "Inativam no mês" até o fechamento, mesmo que compre e a data de inativação mude.
+async function syncClientes(db, clientes, { dry, log, pedidos, base, mk }){
   const hj = hoje(); const hjIso = isoLocal(hj); const agora = new Date().toISOString();
   let { m: idx, partes } = await lerIndice(db);
   if(!partes){
@@ -165,7 +174,9 @@ async function syncClientes(db, clientes, { dry, log, pedidos }){
   const cont = { novos: 0, atualizados: 0, iguais: 0, removidos: 0, mantidosFora: 0, ativo: 0, risco: 0, inativo: 0 };
   for(const c of clientes){
     const id = docIdCod(c.cod);
-    const pipe = classificar(c.dtUltFat, c.dtInat, hj);
+    let pipe = classificar(c.dtUltFat, c.dtInat, hj);
+    const naBase = !!(base && base.has(String(c.cod).trim()));
+    if(naBase) pipe = "risco";
     cont[pipe]++;
     const qlik = {}; CAMPOS_QLIK.forEach(k => { qlik[k] = c[k] ?? null; });
     qlik.dtFatBase = c.dtUltFat || null;
@@ -173,7 +184,9 @@ async function syncClientes(db, clientes, { dry, log, pedidos }){
     if(pedidos){
       qlik.pedMes = Math.round(pedidos.mes.get(c.cod) || 0); qlik.pedMesAnt = Math.round(pedidos.ant.get(c.cod) || 0);
       if(pedidos.tri) qlik.ticket = Math.round((pedidos.tri.get(c.cod) || 0) / 3); // média mensal dos 3 meses fechados
+      if(pedidos.mesLista) qlik.pedidoId = pipe === "risco" ? pedidoInfo(pedidos.mesLista.get(c.cod)) : null;
     }
+    if(pipe === "risco" && mk) qlik.mesRisco = mk;
     const h = hash(JSON.stringify(qlik));
     const entrada = `${pipe}|${c.vendId}|${h}`;
     novoIdx.set(id, entrada);
@@ -231,4 +244,4 @@ async function syncClientes(db, clientes, { dry, log, pedidos }){
   return cont;
 }
 
-module.exports = { mapaDePessoas, mapClientes, syncClientes, syncPessoas, docIdCod, classificar, isoLocal, hoje, hash };
+module.exports = { mapaDePessoas, mapClientes, syncClientes, syncPessoas, docIdCod, classificar, isoLocal, hoje, hash, pedidoInfo, lerVarios, commitEmLotes, PIPE_LABEL };
