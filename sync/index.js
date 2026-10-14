@@ -67,7 +67,7 @@ async function lerPipelineSeLiberada(){
     return { fpipe, dados };
   }catch(e){
     const semPermissao = /PERMISSION_DENIED|permission|7 /i.test(e.message || "");
-    log(semPermissao ? "Pipeline de Retenção: leitura ainda não liberada para o robô do Hub (falta o papel Cloud Datastore Viewer no projeto da Pipeline). Seguindo sem ela." : "Pipeline de Retenção não lida: " + e.message);
+    log(semPermissao ? "Pipeline de Retenção: leitura ainda não liberada para o robô do Hub (falta o papel Cloud Datastore Viewer no projeto da Pipeline). Seguindo sem ela. Detalhe: " + e.message : "Pipeline de Retenção não lida: " + e.message);
     return null;
   }
 }
