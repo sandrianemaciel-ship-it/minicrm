@@ -28,7 +28,10 @@ const dia = n => `${mk}-${String(n).padStart(2, "0")}`;
   const cli = (cod, g, o) => Object.assign({ cod, codGrupo: g, vendId: "ana", cli: "C" + cod, dtUltFat: "2026-01-01", dtInat: dia(20) }, o);
   // 3 clientes inativam no mês (2 do mesmo grupo), 1 ativo; a Pipeline traz mais 1 que já comprou e saiu do mês.
   const clientes = [cli("1", "G1"), cli("2", "G1"), cli("3", "G3"), cli("4", "G4", { dtUltFat: dia(1), dtInat: "2099-01-01" }), cli("5", "G5", { dtUltFat: dia(2), dtInat: "2099-02-01" })];
-  const { set, base } = await R.garantirBase(db, mk, clientes, { log, extraCods: new Set(["5", "999"]), fonteExtra: "pipeline" });
+  // Primeiro sem a Pipeline (base do Hub), depois com ela: a base da Pipeline (dia 1) substitui a do Hub.
+  const b0 = await R.garantirBase(db, mk, clientes, { log });
+  assert.deepStrictEqual([...b0.set].sort(), ["1", "2", "3"]);
+  const { set, base } = await R.garantirBase(db, mk, clientes, { log, extraCods: new Set(["1", "2", "3", "5", "999"]), fonteExtra: "pipeline" });
   assert.deepStrictEqual([...set].sort(), ["1", "2", "3", "5"]);
   assert.strictEqual(base.grupos, 3, "conta grupos, não clientes");
   // A base não muda depois de criada.

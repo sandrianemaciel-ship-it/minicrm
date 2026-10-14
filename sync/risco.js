@@ -18,7 +18,8 @@ const grupoDe = c => (c.codGrupo && String(c.codGrupo).trim()) || ("c" + String(
 
 // ---------- base fixa do mês ----------
 // clientes: lista do Qlik já filtrada pelo organograma (cod, codGrupo, vendId, dtUltFat, dtInat).
-// extraCods: códigos que a Pipeline de Retenção já tinha no mês (para o mês em que o Hub começou no meio).
+// extraCods: códigos que a Pipeline de Retenção tem no mês (levantados por ela no dia 1). Nos meses em que a
+// Pipeline ainda é usada, a base dela é a oficial: substitui a do Hub (só os clientes do organograma).
 async function garantirBase(db, mk, clientes, { dry, log, extraCods, fonteExtra }){
   const ref = db.doc("hub_bases/" + mk);
   const snap = await ref.get();
@@ -27,20 +28,19 @@ async function garantirBase(db, mk, clientes, { dry, log, extraCods, fonteExtra 
   if(snap.exists){
     const b = snap.data();
     const set = new Set((b.itens || []).map(i => i.c));
-    if(extraCods && !(b.fonte || []).includes(fonteExtra)){
-      const add = [...extraCods].filter(c => !set.has(c) && porCod.has(c)).map(c => item(porCod.get(c)));
-      add.forEach(i => set.add(i.c));
-      const itens = (b.itens || []).concat(add);
-      if(!dry) await ref.set({ itens, fonte: (b.fonte || []).concat(fonteExtra), grupos: new Set(itens.map(i => i.g)).size, clientes: itens.length, complementadaEm: new Date().toISOString() }, { merge: true });
-      log(`Base de ${mkLabel(mk)}: ${add.length} clientes acrescentados a partir da Pipeline de Retenção (total ${itens.length}).`);
+    if(extraCods && !(b.fonte || []).includes(fonteExtra) && !b.fechado){
+      const itens = [...extraCods].filter(c => porCod.has(c)).map(c => item(porCod.get(c)));
+      const grupos = new Set(itens.map(i => i.g)).size;
+      if(!dry) await ref.set({ itens, fonte: [fonteExtra], grupos, clientes: itens.length, baseAnteriorHub: { grupos: b.grupos || 0, clientes: b.clientes || 0 }, substituidaEm: new Date().toISOString() }, { merge: true });
+      log(`Base de ${mkLabel(mk)} passou a ser a da Pipeline de Retenção (levantada no dia 1): ${grupos} grupos (${itens.length} clientes do organograma). Antes: ${b.grupos || 0} grupos.`);
+      return { set: new Set(itens.map(i => i.c)), base: { ...b, itens, grupos, clientes: itens.length } };
     }
     return { set, base: b };
   }
   const hj = hoje();
-  const lista = clientes.filter(c => classificar(c.dtUltFat, c.dtInat, hj) === "risco");
+  const lista = extraCods ? [...extraCods].filter(c => porCod.has(c)).map(c => porCod.get(c)) : clientes.filter(c => classificar(c.dtUltFat, c.dtInat, hj) === "risco");
   const set = new Set(lista.map(c => String(c.cod).trim()));
-  const fonte = ["qlik"];
-  if(extraCods){ [...extraCods].forEach(c => { if(!set.has(c) && porCod.has(c)){ set.add(c); lista.push(porCod.get(c)); } }); fonte.push(fonteExtra); }
+  const fonte = extraCods ? [fonteExtra] : ["qlik"];
   const itens = lista.map(item);
   const base = { mk, criadaEm: new Date().toISOString(), fonte, itens, grupos: new Set(itens.map(i => i.g)).size, clientes: itens.length, fechado: false };
   if(!dry) await ref.set(base);
