@@ -589,6 +589,17 @@ const ORIGENS = [
 const OFENSORES = ["Giro","Estoque","Preço","Concorrência","Sem retorno","Limite de crédito","Mix não aderente","Outro"];
 const OF_KIND = {"Preço":"preco","Concorrência":"preco","Estoque":"estoque","Giro":"giro","Sem retorno":"meios","Limite de crédito":"credito","Mix não aderente":"mix","Outro":"outro"};
 const LINHAS = ["Home","Health","Ortho","Wellness"];
+// Clientes que inativam no mês seguem a Pipeline de Retenção: mesma lista de ofensores, mesmos detalhes e mesmos campos obrigatórios.
+const OFENSORES_PIPE = ["Giro","Estoque","Preço","Concorrência","Sem contato","Sem retorno","Inadimplência","Restrição","Limite de crédito","Outros"];
+const OF_KIND_PIPE = {"Preço":"preco","Concorrência":"preco","Giro":"giro","Estoque":"estoque","Sem contato":"meios","Sem retorno":"meios"};
+const PIPELINE_URL = "https://sandrianemaciel-ship-it.github.io/pipeline-dellamed/";
+const ehRisco = it => !!it && it.empresa===undefined && it.pipe==="risco";
+const ofListOf = it => ehRisco(it) ? OFENSORES_PIPE : OFENSORES;
+const ofKindOf = it => ehRisco(it) ? OF_KIND_PIPE : OF_KIND;
+// Enquanto o mês está aberto na Pipeline, o cliente é atualizado por ela (o robô copia de hora em hora) e fica só para leitura no Hub.
+const travado = it => !!it && !!it.travaPipeline && it.travaPipeline===CUR_MK;
+// "Inativam no mês" e "Inativado" são automáticos, como na Pipeline: passou a data de inativação sem compra, vira Inativado.
+function subEtapaRisco(it){ const d = pd(it.dtInat); return d && d<=TODAY ? "Inativado" : "Inativam no mês"; }
 const ACOES = ["Promoção","Bonificação","Prazo","Outros"];
 // Histórico de CRM: fica gravado no próprio cliente/lead, sem limite, com quem registrou e de quem era a carteira.
 // Se o cliente trocar de vendedor ou responsável, o histórico vai junto.
@@ -711,7 +722,7 @@ function aplicarOrganograma(){
   DB.organogramaV = ORGANOGRAMA_V;
   return true;
 }
-const COL = {cli:"hub_clientes", lead:"hub_leads", pes:"hub_pessoas", cfg:"hub_config", anexo:"hub_anexos", preset:"hub_presets", hist:"hub_historico", sync:"hub_sync"};
+const COL = {cli:"hub_clientes", lead:"hub_leads", pes:"hub_pessoas", cfg:"hub_config", anexo:"hub_anexos", preset:"hub_presets", hist:"hub_historico", sync:"hub_sync", base:"hub_bases"};
 let fdb = null;
 const SNAP = new Map(); // última versão gravada/lida de cada registro (para gravar só o que mudou)
 const js = o => JSON.stringify(o);
@@ -725,10 +736,13 @@ const docCli = d => { const o = d.data(); o.cod = o.cod || d.id; o.id = "c"+d.id
 const docId = d => ({...d.data(), id:d.id});
 const semId = o => { const c = {...o}; delete c.id; return c; };
 async function loadAll(){
-  const [cs, ls, ps, cfg, hs, st, pr] = await Promise.all([
+  const [cs, ls, ps, cfg, hs, st, pr, bs] = await Promise.all([
     Promise.resolve(null), Promise.resolve(null), fdb.collection(COL.pes).get(),
-    fdb.doc(COL.cfg+"/geral").get(), fdb.collection(COL.hist).get(), fdb.doc(COL.sync+"/status").get(), fdb.collection(COL.preset).get()]);
+    fdb.doc(COL.cfg+"/geral").get(), fdb.collection(COL.hist).get(), fdb.doc(COL.sync+"/status").get(), fdb.collection(COL.preset).get(),
+    fdb.collection(COL.base).get().catch(()=>({docs:[]}))]);
   DB = blankDB();
+  // Bases fixas dos clientes que inativam no mês (levantadas pelo robô no dia 1, uma por mês).
+  DB.bases = {}; bs.docs.forEach(d=>{ DB.bases[d.id] = d.data(); });
   DB.clients = []; // carregados depois do login, só os que a pessoa pode ver (carregarClientes)
   DB.leads = []; // carregados depois do login, junto com os clientes
   DB.people = ps.docs.map(docId);
@@ -1109,6 +1123,9 @@ function cardBadges(pk, it){
     if(st.end==="won") b.push(`<span class="chip good">recuperado</span>`);
     else if(ate>0) b.push(`<span class="chip warn">inativa em ${ate} ${ate===1?"dia":"dias"} · ${fdShort(it.dtInat)}</span>`);
     else b.push(`<span class="chip bad">inativou em ${fdShort(it.dtInat)}</span>`);
+    if(it.stage==="carteira") b.push(`<span class="chip">${subEtapaRisco(it)}</span>`);
+    if(it.pedidoId && it.stage!=="ganho") b.push(`<span class="chip good" title="Pedido emitido no mês, identificado no Qlik">PEDIDO IDENTIFICADO</span>`);
+    if(travado(it)) b.push(`<span class="chip acc" title="Atualizado pela Pipeline de Retenção">na Pipeline</span>`);
   }else if(pk==="inativos"){
     const d = days(TODAY, pd(it.dtUltFat));
     b.push(`<span class="chip ${d>365?"bad":""}">${d} dias sem comprar</span>`);
@@ -1231,11 +1248,12 @@ function requestMove(id, stageK){
   const it = findItem(id); if(!it) return;
   const pk = pkOfItem(it);
   if(it.stage===stageK) return;
+  if(travado(it)){ toast("Este cliente está sendo acompanhado na Pipeline de Retenção neste mês. Atualize por lá; o Hub copia de hora em hora."); return; }
   if(!canEdit(it)){ toast("Você só pode mover os seus próprios clientes e leads."); return; }
   const st = stageOf(pk, stageK);
   if(st.needs || PIPES[pk].kind==="client") openGate(it, pk, st); else { doMove(it, pk, stageK); save(); }
 }
-function canEdit(it){ return podeVer(ownerOf(it)); }
+function canEdit(it){ return !travado(it) && podeVer(ownerOf(it)); }
 function doMove(it, pk, k, extra={}){
   const st = stageOf(pk,k);
   const from = stageOf(pk,it.stage).label;
@@ -1270,8 +1288,9 @@ function openModal(html, small){
 function closeModal(){ const o=$("#overlay"); o.hidden = true; o.innerHTML = ""; if(S.renderPendente){ S.renderPendente = false; render(); } }
 
 /* ---------- Ofensor (mesmos campos da Pipeline de Retenção) ---------- */
-function ofSelectHtml(id, val, required){
-  return `<label class="fld"><span>Ofensor${required?" *":""}</span><select id="${id}" data-of-select="1">${opt("", required?"Selecione o ofensor":"Nenhum", !val)}${OFENSORES.map(o=>opt(o,o,o===val)).join("")}</select></label><div id="${id}-det"></div>`;
+function ofSelectHtml(id, val, required, list){
+  list = list || OFENSORES;
+  return `<label class="fld"><span>Ofensor${required?" *":""}</span><select id="${id}" data-of-select="1">${opt("", required?"Selecione o ofensor":"Nenhum", !val)}${list.map(o=>opt(o,o,o===val)).join("")}</select></label><div id="${id}-det"></div>`;
 }
 function anexoHtml(id){
   if(!id) return "";
@@ -1281,9 +1300,9 @@ function anexoHtml(id){
   if((a.type||"").startsWith("audio/")) return `<div class="anexo"><audio controls src="${a.dataUrl}"></audio></div>`;
   return `<div class="anexo">${esc(a.name)} · anexo salvo</div>`;
 }
-function ofDetailHtml(of, det, px){
+function ofDetailHtml(of, det, px, kinds){
   det = (det && det.tipo===of) ? det : {};
-  const kind = OF_KIND[of]; if(!kind) return "";
+  const kind = (kinds||OF_KIND)[of]; if(!kind) return "";
   const head = `<div class="of-title">Detalhe do ofensor · ${esc(of)}</div>`;
   const chk = (name, opts, sel) => `<div class="checks">${opts.map(o=>`<label><input type="checkbox" class="${px}-${name}" value="${esc(o)}"${(sel||[]).includes(o)?" checked":""}> ${esc(o)}</label>`).join("")}</div>`;
   if(kind==="preco") return `<div class="of-box">${head}
@@ -1308,10 +1327,10 @@ function ofDetailHtml(of, det, px){
   if(kind==="outro") return `<div class="of-box">${head}<label class="fld"><span>Descreva o ofensor *</span><textarea id="${px}-desc">${esc(det.descricao||"")}</textarea></label></div>`;
   return "";
 }
-function wireOfensor(selId, det){
+function wireOfensor(selId, det, kinds){
   const sel = document.getElementById(selId); if(!sel) return;
   const box = document.getElementById(selId+"-det");
-  const draw = ()=>{ box.innerHTML = ofDetailHtml(sel.value, det, selId); };
+  const draw = ()=>{ box.innerHTML = ofDetailHtml(sel.value, det, selId, kinds); };
   sel.addEventListener("change", draw); draw();
 }
 function readFileForAnexo(file, imageOnly){
@@ -1342,10 +1361,10 @@ function readFileForAnexo(file, imageOnly){
     r.readAsDataURL(file);
   });
 }
-async function collectOfensor(selId, prev, required){
+async function collectOfensor(selId, prev, required, kinds){
   const sel = document.getElementById(selId); const of = sel ? sel.value : "";
   if(!of) return required ? {ok:false, msg:"Escolha o ofensor."} : {ok:true, of:null, det:null};
-  const kind = OF_KIND[of]; const px = selId;
+  const kind = (kinds||OF_KIND)[of]; const px = selId;
   const val = id => { const el = document.getElementById(px+"-"+id); return el ? el.value.trim() : ""; };
   const checked = name => Array.from(document.querySelectorAll(`.${px}-${name}:checked`)).map(el=>el.value);
   const det = {tipo:of};
@@ -1374,7 +1393,68 @@ function ofSummary(of, d){
   return parts.join(" · ");
 }
 
+// Campos obrigatórios para mover um cliente que inativa no mês (mesma regra de requiredFieldsForMove da Pipeline).
+// "carteira" equivale a Inativam no mês / Inativado.
+function reqRisco(from, to){
+  const r = new Set(["obs"]);
+  if(from==="carteira") ["ult","prox","hora","dec","wpp"].forEach(x=>r.add(x));
+  if(to==="contato") ["ult","prox","hora"].forEach(x=>r.add(x));
+  else if(to==="proposta" || to==="negociando"){ r.add("prop"); r.add("linhas"); }
+  else if(to==="perdido") ["ult","prox","hora","of"].forEach(x=>r.add(x));
+  return r;
+}
+function openGateRisco(it, pk, st){
+  const req = reqRisco(it.stage, st.k);
+  const R = k => req.has(k) ? " *" : "";
+  let body = `<p class="hint">Cliente que inativa no mês: a movimentação segue as regras da Pipeline de Retenção. Campos com * são obrigatórios.</p>
+    <label class="fld"><span>CRM - resumo breve do contato *</span><textarea id="g-obs" placeholder="O que aconteceu neste contato?"></textarea></label>`;
+  if(req.has("ult") || req.has("prox")) body += `<div class="grid2">
+      <label class="fld"><span>Data do último contato${R("ult")}</span><input type="date" id="g-ult" value="${it.dtUltContato||iso(TODAY)}"></label>
+      <label class="fld"><span>Próximo contato${R("prox")}</span><input type="date" id="g-prox" value="${it.prox||""}"></label>
+      <label class="fld"><span>Horário do próximo contato${R("hora")}</span><input type="time" id="g-hora" value="${it.horaProx||""}"></label></div>`;
+  if(req.has("dec") || req.has("wpp")) body += `<div class="grid2">
+      <label class="fld"><span>Nome do contato decisor${R("dec")}</span><input id="g-dec" value="${esc(it.decisor||"")}"></label>
+      <div class="fld"><span>WhatsApp do decisor${R("wpp")}</span><input id="g-wpp" inputmode="tel" value="${esc(it.whatsapp||"")}"${it.semWpp?" disabled":""}>
+        <label class="wpp-off"><input type="checkbox" id="g-semwpp"${it.semWpp?" checked":""}> Cliente sem WhatsApp</label></div></div>`;
+  if(req.has("prop")) body += `<div class="grid2">
+      <label class="fld"><span>Valor da proposta (R$) *</span><input id="g-prop" type="number" min="0" step="0.01" value="${it.valorProposta||""}"></label>
+      <div class="fld"><span>Linhas positivadas *</span><div class="linhas">${LINHAS.map(l=>`<label><input type="checkbox" class="g-linha" value="${l}"${(it.linhas||[]).includes(l)?" checked":""}><span>${l.toUpperCase()}</span></label>`).join("")}</div></div></div>`;
+  if(st.k==="ganho"){
+    const sug = (it.pedidoId && it.pedidoId.valor) || it.valor || "";
+    body += `<label class="fld"><span>Valor do pedido (R$)</span><input id="g-valor" type="number" min="0" step="10" value="${sug}"></label>`;
+  }
+  if(req.has("of")) body += ofSelectHtml("g-of", it.ofensor, true, OFENSORES_PIPE);
+  openModal(`<div class="m-head"><div><h2>${st.label}</h2><p>${esc(it.cli)}</p></div><button class="x" data-act="close" type="button" aria-label="Fechar">×</button></div>
+    <form id="gateForm"><div class="m-body">${body}<div class="err" id="g-err" role="alert"></div></div>
+    <div class="m-foot"><button class="btn" type="button" data-act="close">Cancelar</button><button class="btn primary" type="submit">Confirmar</button></div></form>`, !req.has("of") && !req.has("prop"));
+  if(req.has("of")) wireOfensor("g-of", it.ofDet, OF_KIND_PIPE);
+  const sw = $("#g-semwpp"); if(sw) sw.addEventListener("change", ()=>{ $("#g-wpp").disabled = sw.checked; });
+  $("#gateForm").onsubmit = async e=>{
+    e.preventDefault();
+    const err = m => { $("#g-err").textContent = m; };
+    const v = id => { const el = $("#"+id); return el ? el.value.trim() : ""; };
+    const obs = v("g-obs"); if(!obs) return err("Registre o CRM (resumo do contato) antes de mover.");
+    if(req.has("ult") && !v("g-ult")) return err("Informe a data do último contato.");
+    if(req.has("prox") && !v("g-prox")) return err("Agende o próximo contato.");
+    if(req.has("hora") && !v("g-hora")) return err("Informe o horário do próximo contato.");
+    if(req.has("dec") && !v("g-dec")) return err("Informe o nome do contato decisor.");
+    const semW = $("#g-semwpp") ? $("#g-semwpp").checked : false;
+    if(req.has("wpp") && !semW && !v("g-wpp")) return err("Informe o WhatsApp do decisor ou marque que o cliente não tem WhatsApp.");
+    let prop = null, linhas = null;
+    if(req.has("prop")){ prop = Number(v("g-prop")); if(!(prop>0)) return err("Informe o valor da proposta."); linhas = Array.from(document.querySelectorAll(".g-linha:checked")).map(x=>x.value); if(!linhas.length) return err("Marque ao menos uma linha positivada."); }
+    const extra = {obs};
+    if(req.has("of")){ const r = await collectOfensor("g-of", it.ofDet, true, OF_KIND_PIPE); if(!r.ok) return err(r.msg); extra.ofensor = r.of; extra.ofDet = r.det; }
+    if($("#g-valor")){ const val = Number(v("g-valor")); if(val>0) extra.valor = val; }
+    doMove(it, pk, st.k, extra);
+    if($("#g-ult")) it.dtUltContato = v("g-ult") || it.dtUltContato;
+    if($("#g-prox")){ it.prox = v("g-prox") || it.prox; it.horaProx = v("g-hora") || it.horaProx; }
+    if($("#g-dec")){ it.decisor = v("g-dec"); it.semWpp = semW; if(!semW) it.whatsapp = v("g-wpp"); }
+    if(prop){ it.valorProposta = prop; it.linhas = linhas; }
+    closeModal(); save();
+  };
+}
 function openGate(it, pk, st){
+  if(ehRisco(it)) return openGateRisco(it, pk, st);
   const name = it.cli||it.empresa;
   let body = "";
   if(st.needs==="valor" || st.needs==="handoff"){
@@ -1434,7 +1514,13 @@ function openClientDetail(it){
   const refH = `<div class="ref-grid">${ref.map(([k,v])=> k==="__valor"
     ? `<div><small>Valor de pedido (R$) <em>· editável</em></small><input id="c-valor" type="number" min="0" step="10" value="${it.valor||0}"${dis} aria-label="Valor de pedido"></div>`
     : `<div><small>${k}</small><b>${esc(v)}</b></div>`).join("")}</div>`;
-  const pills = `<div class="pills">${P.stages.map(s=>`<button type="button" data-move="${s.k}" class="${s.k===it.stage?"cur":""}"${ed?"":" disabled"}>${s.label}</button>`).join("")}</div>`;
+  const pills = `<div class="pills">${P.stages.map(s=>`<button type="button" data-move="${s.k}" class="${s.k===it.stage?"cur":""}"${ed?"":" disabled"}>${ehRisco(it)&&s.k==="carteira"?subEtapaRisco(it):s.label}</button>`).join("")}</div>`;
+  const RES_L = {ganho:"Ganho", perdido:"Negociação perdida"};
+  const fech = (it.fechamentos||[]).slice().sort((a,b)=>String(b.mes).localeCompare(String(a.mes)));
+  let avisos = "";
+  if(travado(it)) avisos += `<div class="callout" style="background:var(--accent-soft);color:var(--accent)">Em acompanhamento na Pipeline de Retenção em ${mkLabel(CUR_MK)}. Etapa, CRM, ofensor e proposta vêm de lá e são copiados de hora em hora. Para alterar, use a <a href="${PIPELINE_URL}" target="_blank" rel="noopener">Pipeline de Retenção</a>.</div>`;
+  if(ehRisco(it) && it.pedidoId) avisos += `<div class="callout">PEDIDO IDENTIFICADO no Qlik: ${esc((it.pedidoId.pedidos||[]).join(", "))} · ${money(it.pedidoId.valor)} · desde ${fd(it.pedidoId.dtPrimeiro)}.${it.stage!=="ganho"?" Se ninguém mover, vira Ganho automático no fechamento do mês.":""}</div>`;
+  const fechH = fech.length ? `<div class="fld"><span>Resultados de meses anteriores (inativam no mês)</span><ul class="hist">${fech.map(f=>`<li><time>${mkLabel(f.mes)}</time><span><b>${RES_L[f.resultado]||esc(f.resultado)}</b>${f.auto?" automático":""}${f.fonte==="pipeline"?" · Pipeline de Retenção":""}${f.etapa?" · estava em "+esc(f.etapa):""}${f.ofensor?" · ofensor: "+esc(ofSummary(f.ofensor, f.ofDet)):""}${f.valor?" · "+money(f.valor):""}</span></li>`).join("")}</ul></div>` : "";
   let contato = `<div class="grid2">
     <label class="fld"><span>Data do último contato</span><input type="date" id="c-ult" value="${it.dtUltContato||""}"${dis}></label>
     <label class="fld"><span>Agendar próximo contato</span><input type="date" id="d-prox" value="${it.prox||""}"${dis}></label>
@@ -1450,7 +1536,7 @@ function openClientDetail(it){
   </div>
   <div class="sec-title">Classificação</div>
   <div class="grid2">
-    <div class="fld"><span class="lbl-row">Status <em>(calculado automaticamente)</em></span><select disabled aria-label="Status">${opt(pk, CART[pk].sl+" · "+stageOf(pk,it.stage).label, true)}</select></div>
+    <div class="fld"><span class="lbl-row">Status <em>(calculado automaticamente)</em></span><select disabled aria-label="Status">${opt(pk, CART[pk].sl+" · "+(ehRisco(it)&&it.stage==="carteira"?subEtapaRisco(it):stageOf(pk,it.stage).label), true)}</select></div>
     <label class="fld"><span>Ação</span><select id="c-acao"${dis}>${opt("","—",!it.acao)}${ACOES.map(a=>opt(a,a,a===it.acao)).join("")}</select></label>
     <label class="fld"><span>Time</span><select id="c-time"${g?"":" disabled"}>${teams().filter(t=>t!=="Prospecção").map(t=>opt(t,t,vend&&vend.time===t)).join("")}</select></label>
     <label class="fld"><span>Vendedor</span><select id="d-owner"${g?"":" disabled"}>${sellers().filter(p=>!vend || p.time===vend.time).map(p=>opt(p.id,p.nome.toUpperCase(),p.id===it.vend)).join("")}</select></label>
@@ -1458,20 +1544,20 @@ function openClientDetail(it){
   const hist = `<div class="fld"><span>Histórico</span><ul class="hist">${(it.hist||[]).map(h=>`<li><time>${fd(h.d)}</time><span>${esc(h.t)}</span></li>`).join("")||"<li>Sem registros.</li>"}</ul></div>`;
   openModal(`<div class="m-head"><div><h2>${esc(it.cli)}</h2><p>Cód ${it.cod} · ${esc(it.cid).toUpperCase()}/${it.uf} · ${esc(it.seg)}${ed?"":" · somente leitura"}</p></div><button class="x" data-act="close" type="button" aria-label="Fechar">×</button></div>
     <div class="m-body">
-      <div class="sec-title">Referência (base ERP)</div>${refH}
+      ${avisos}<div class="sec-title">Referência (base ERP)</div>${refH}
       <div class="sec-title">Estágio no pipeline <small>(clique para mover — abre o registro obrigatório da movimentação)</small></div>${pills}
       <div class="sec-title">Contato</div>${contato}
-      ${ofSelectHtml("d-of", it.ofensor, false)}
+      ${ofSelectHtml("d-of", it.ofensor, false, ofListOf(it))}
       <label class="fld"><span>CRM - resumo breve do último contato com o cliente</span><textarea id="d-obs" placeholder="Ex.: tem interesse em motorizada, quer desconto; liberamos adicionando Ortho no pedido"${dis}></textarea></label>
       <div class="err" id="d-err" role="alert"></div>
-      <div class="fld"><span>Histórico de CRM (todos os vendedores)</span>${crmHtml(it)}</div>
+      ${fechH}<div class="fld"><span>Histórico de CRM (todos os vendedores)</span>${crmHtml(it)}</div>
       ${hist.replace("<span>Histórico</span>","<span>Movimentações</span>")}
     </div>
     <div class="m-foot"><button class="btn big" type="button" data-act="close">Fechar</button>${ed?`<button class="btn primary big" type="button" data-act="saveDetail" data-id="${it.id}">Salvar alterações</button>`:""}</div>`);
   $("#overlay .modal").classList.add("client");
   const sw = $("#c-semwpp"); if(sw) sw.addEventListener("change", ()=>{ $("#d-wpp").disabled = sw.checked; });
   const ct = $("#c-time"); if(ct) ct.addEventListener("change", ()=>{ $("#d-owner").innerHTML = sellers().filter(p=>p.time===ct.value).map(p=>opt(p.id,p.nome.toUpperCase(),false)).join(""); });
-  wireOfensor("d-of", it.ofDet);
+  wireOfensor("d-of", it.ofDet, ofKindOf(it));
   if(!ed) document.querySelectorAll("#d-of, #d-of-det input, #d-of-det textarea, #d-of-det select").forEach(el=>el.disabled = true);
 }
 function openDetail(id){
@@ -1513,7 +1599,8 @@ function openDetail(id){
 }
 async function saveDetail(id){
   const it = findItem(id); if(!it) return;
-  const r = await collectOfensor("d-of", it.ofDet, false);
+  if(travado(it)){ toast("Este cliente está sendo acompanhado na Pipeline de Retenção neste mês."); return; }
+  const r = await collectOfensor("d-of", it.ofDet, false, ofKindOf(it));
   if(!r.ok){ $("#d-err").textContent = r.msg; return; }
   const obs = $("#d-obs").value.trim(); if(obs){ pushCrm(it, obs); if(it.empresa===undefined) it.dtUltContato = iso(TODAY); }
   const own = $("#d-owner"); if(own) setOwner(it, own.value || null);
@@ -1705,6 +1792,76 @@ function metaCard(key, titulo, base, feitos, meta, baseTxt){
     <div class="meta-rows"><div><span>Meta (${meta}%)</span><b>${alvo}</b></div><div><span>Estamos em</span><b style="color:var(--good)">${feitos} (${pctNow}%)</b></div><div><span>Falta p/ meta</span><b style="color:${falta?"var(--warn)":"var(--good)"}">${falta} (${Math.max(0,meta-pctNow)}%)</b></div></div>
     <div class="s">${baseTxt}</div></div>`;
 }
+/* ---------- Inativam no mês: mesma visão do Dashboard da Pipeline de Retenção (Status = Inativam no mês) ----------
+   Base fixa levantada no dia 1 (hub_bases), contada por grupo de clientes (Cód Grupo; sem grupo, o próprio cliente).
+   Um grupo conta como recuperado se algum cliente dele estiver em Ganho (como na Pipeline: o cartão Ganho vence). */
+const RISCO_ETAPAS = [
+  {k:"inativam", l:"Inativam no mês", c:"var(--warn)"}, {k:"inativo", l:"Inativado", c:"var(--ink-faint)"},
+  {k:"contato", l:"Contato feito", c:"#3b7fd9"}, {k:"proposta", l:"Proposta enviada", c:"#7a5cd6"},
+  {k:"negociando", l:"Negociando", c:"#c98a1f"}, {k:"ganho", l:"Ganho", c:"var(--good)"}, {k:"perdido", l:"Negociação perdida", c:"var(--bad)"}];
+function etapaRisco(c){ return c.stage==="carteira" ? (subEtapaRisco(c)==="Inativado" ? "inativo" : "inativam") : c.stage; }
+function riscoBase(mk){
+  const B = DB.bases && DB.bases[mk];
+  const g = S.gf || {};
+  const okVend = v => podeVer(v) && (!(g.vend||[]).length || g.vend.includes(v||"—")) && (!(g.time||[]).length || g.time.includes((person(v)||{}).time||"—"));
+  const porCod = new Map(DB.clients.map(c=>[String(c.cod), c]));
+  let itens;
+  if(B) itens = (B.itens||[]).filter(i=>okVend(i.v)).map(i=>({...i, cli: mk===CUR_MK ? porCod.get(String(i.c)) : null}));
+  else if(mk===CUR_MK) itens = DB.clients.filter(c=>c.pipe==="risco" && okVend(c.vend)).map(c=>({c:c.cod, g:c.codGrupo||("c"+c.cod), v:c.vend, cli:c}));
+  else itens = [];
+  if(mk===CUR_MK) itens = itens.filter(i=>!i.cli || gfOk(i.cli, "status"));
+  itens.forEach(i=>{
+    if(i.cli){ i.etapa = etapaRisco(i.cli); i.pedido = !!i.cli.pedidoId && i.cli.stage!=="ganho"; i.auto = false; }
+    else { i.etapa = i.r || (B && B.fechado ? "perdido" : "inativam"); i.pedido = false; i.auto = !!i.a; }
+  });
+  const gm = new Map(); itens.forEach(i=>{ if(!gm.has(i.g)) gm.set(i.g, []); gm.get(i.g).push(i); });
+  const grupos = [...gm.entries()].map(([k, L])=>{ const rep = L.find(x=>x.etapa==="ganho") || L[0]; return {g:k, itens:L, rep, ganho: rep.etapa==="ganho", v: rep.v}; });
+  return {mk, B, provisoria: !B, fechado: !!(B && B.fechado), itens, grupos, criadaEm: B && B.criadaEm};
+}
+function painelRisco(){
+  const mk = S.gf.mes || CUR_MK;
+  const RB = riscoBase(mk); const total = RB.grupos.length; const M = DB.metas.impedir || 70;
+  const cliDe = L => L.map(x=>x.rep ? x.rep.cli : x.cli).filter(Boolean);
+  const reps = RB.grupos.map(x=>x.rep);
+  const tile = (k, v, sub, drill, color) => `<button type="button" class="kpi2" ${drill||""}><span class="k">${color?`<i style="background:${color}"></i>`:""}${k}</span><span class="v num">${v}</span><span class="s">${sub}</span></button>`;
+  const dr = (key, title, grupos) => { const L = cliDe(grupos); return L.length ? drillAttr("rk-"+key, title, L) : ""; };
+  let t = tile("Inativariam no mês", total, RB.provisoria ? "Base provisória (o robô fixa a base no dia 1)" : `Base fixa de ${mkLabel(mk)} · ${RB.itens.length} clientes · grupos de clientes`, dr("base","Inativariam no mês",RB.grupos), "var(--warn)");
+  RISCO_ETAPAS.forEach(e=>{ const G = RB.grupos.filter(x=>x.rep.etapa===e.k); t += tile(e.l, G.length, `${pct(G.length,total)}% da base do mês`, dr("e-"+e.k, e.l, G), e.c); });
+  const ganhos = RB.grupos.filter(x=>x.ganho).length;
+  t += `<div class="kpi2 wide2">${metaCard("impedir-r","Impedi de inativar", total, ganhos, M, `Base: ${total} grupos de clientes que inativariam em ${mkLabel(mk)}`).replace('<div class="meta-card">','<div class="meta-card" style="background:none;padding:0">')}</div>`;
+  const ped = RB.grupos.filter(x=>x.rep.pedido);
+  t += tile("Pedido identificado", ped.length, "Com pedido no Qlik e ainda fora de Ganho — mover para Ganho", dr("ped","Pedido identificado",ped), "var(--good)");
+  const pa = RB.grupos.filter(x=>x.rep.auto && x.rep.etapa==="perdido"), ga = RB.grupos.filter(x=>x.rep.auto && x.rep.etapa==="ganho");
+  t += tile("Perdido automático", pa.length, RB.fechado ? "Movidos no fechamento do mês sem ação do vendedor" : "Calculado no fechamento do mês (dia 1)", "", "var(--bad)");
+  t += tile("Ganho automático", ga.length, RB.fechado ? "Pedido identificado e não movido pelo vendedor até o fechamento" : "Calculado no fechamento do mês (dia 1)", "", "var(--good)");
+  const tq = {quente:"negociando", morno:"proposta", frio:"perdido"};
+  [["Frios","frio","var(--accent)"],["Mornos","morno","var(--warn)"],["Quentes","quente","var(--bad)"]].forEach(([l,k,c])=>{ const G = RB.grupos.filter(x=>x.rep.etapa===tq[k]); t += tile(l, G.length, `${pct(G.length,total)}% da base do mês`, dr("t-"+k, l, G), c); });
+  // Por vendedor: meta de 70% sobre a base de cada um
+  const pv = {}; RB.grupos.forEach(x=>{ const v = x.v || "—"; pv[v] = pv[v] || {base:0, ganho:0, ped:0, crm:0, gs:[]}; const o = pv[v]; o.base++; o.gs.push(x); if(x.ganho) o.ganho++; if(x.rep.pedido) o.ped++; if(x.itens.some(i=>i.cli && (i.cli.crm||[]).length)) o.crm++; });
+  const rows = Object.entries(pv).sort((a,b)=> pct(b[1].ganho,b[1].base)-pct(a[1].ganho,a[1].base) || b[1].base-a[1].base);
+  const tab = rows.length ? `<div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Time</th><th class="num">Base (grupos)</th><th class="num">Meta ${M}%</th><th class="num">Ganho</th><th class="num">% recuperado</th><th class="num">Falta p/ meta</th><th class="num">Pedido identificado</th><th class="num">Com CRM</th></tr></thead><tbody>${rows.map(([v,o],i)=>{ const meta = Math.ceil(o.base*M/100), falta = Math.max(0, meta-o.ganho), p = pct(o.ganho,o.base);
+      return `<tr class="click" ${dr("v-"+i, "Inativam no mês · "+nameOf(v), o.gs)}><td><b>${esc(nameOf(v))}</b></td><td>${esc((person(v)||{}).time||"—")}</td><td class="num">${o.base}</td><td class="num">${meta}</td><td class="num">${o.ganho}</td><td class="num" style="color:${p>=M?"var(--good)":p>=M/2?"var(--warn)":"var(--bad)"}">${p}%</td><td class="num">${falta}</td><td class="num">${o.ped}</td><td class="num">${o.crm}</td></tr>`; }).join("")}</tbody></table></div>` : `<p class="hint">Sem clientes que inativam no mês com esses filtros.</p>`;
+  // Gráficos (sobre o cartão que representa cada grupo)
+  const grp = fn => { const m = {}; reps.forEach(r=>{ const c = r.cli; if(!c) return; const k = fn(c); if(k==null) return; (m[k]=m[k]||[]).push(c); }); return Object.entries(m).sort((a,b)=>b[1].length-a[1].length); };
+  const ofR = grp(c=>c.ofensor||null).map(([k,v],i)=>({l:k, n:v.length, c:"var(--bad)", drill:drillAttr("rk-of"+i,"Ofensor: "+k,v)}));
+  const segR = grp(c=>c.seg).map(([k,v],i)=>({l:k, n:v.length, drill:drillAttr("rk-seg"+i,"Canal: "+k,v)}));
+  const timeR = grp(c=>(person(c.vend)||{}).time||"—").map(([k,v],i)=>({l:k, n:v.length, drill:drillAttr("rk-tm"+i,"Time: "+k,v)}));
+  const lm = {}; LINHAS.forEach(l=>lm[l]=[]); reps.forEach(r=>{ const c = r.cli; if(c) (c.linhas||[]).forEach(x=>{ if(lm[x]) lm[x].push(c); }); });
+  const linR = LINHAS.map(l=>({l, n:lm[l].length, drill:drillAttr("rk-ln"+l,"Linha "+l,lm[l])}));
+  // Evolução mês a mês: % de grupos recuperados x meta
+  const meses = Object.keys(DB.bases||{}).filter(k=>/^\d{4}-\d{2}$/.test(k)).sort().slice(-6);
+  const evo = meses.map(k=>{ const r = riscoBase(k); const gg = r.grupos.filter(x=>x.ganho).length; const val = r.itens.reduce((a,i)=>a + (i.cli ? (i.cli.stage==="ganho" ? Number(i.cli.valor)||0 : 0) : (i.r==="ganho" ? Number(i.val)||0 : 0)), 0); return {k, n:r.grupos.length, gg, p:pct(gg, r.grupos.length), val}; });
+  const evoH = evo.length ? `<div class="hlist">${evo.map(e=>`<div class="hl-row"><span class="hl-l">${mkLabel(e.k)}${e.k===CUR_MK?" (em andamento)":""}</span><span class="hl-t" style="position:relative"><span style="width:${Math.min(100,e.p)}%;background:${e.p>=M?"var(--good)":"var(--warn)"}"></span><i style="position:absolute;top:-3px;bottom:-3px;left:${M}%;border-left:2px dashed var(--ink)" title="Meta ${M}%"></i></span><span class="hl-v num">${e.p}% <small>(${e.gg} de ${e.n} · ${money(e.val)})</small></span></div>`).join("")}</div>` : `<p class="hint">O histórico aparece a partir do primeiro mês com base fixa.</p>`;
+  return `<section class="panel" style="margin-bottom:12px"><h2>Inativam no mês · ${mkLabel(mk)}</h2><p class="sub">Mesma visão do Dashboard da Pipeline de Retenção. Base fixa levantada no dia 1${RB.criadaEm?` (${fd(RB.criadaEm.slice(0,10))})`:""}, contada por grupo de clientes; meta de recuperação de ${M}% para todos os vendedores.</p><div class="kpi2-grid">${t}</div></section>
+    <div class="dash-grid" style="margin-bottom:12px">
+      <section class="panel span-12"><h2>Recuperação por vendedor</h2><p class="sub">Meta de ${M}% sobre a base de cada vendedor (grupos de clientes que inativam no mês). Clique na linha para ver os clientes.</p>${tab}</section>
+      <section class="panel span-6"><h2>Evolução da recuperação</h2><p class="sub">Grupos recuperados (Ganho) sobre a base fixa de cada mês. A linha tracejada é a meta de ${M}%.</p>${evoH}</section>
+      <section class="panel span-6"><h2>Ofensores · inativam no mês</h2><p class="sub">Motivos registrados nos clientes da base do mês.</p>${ofR.length?hbarList(ofR, ofR.reduce((a,r)=>a+r.n,0)):`<p class="hint">Nenhum ofensor registrado. Opções: ${OFENSORES_PIPE.join(", ")}.</p>`}</section>
+      <section class="panel span-4"><h2>Por canal</h2><p class="sub">Segmento dos clientes da base.</p><div class="scroll-y">${hbarList(segR, total)}</div></section>
+      <section class="panel span-4"><h2>Por time</h2><p class="sub">Grupos da base por time.</p>${hbarList(timeR, total)}</section>
+      <section class="panel span-4"><h2>Por linha</h2><p class="sub">Linhas positivadas nos cartões da base.</p>${hbarList(linR, total)}</section>
+    </div>`;
+}
 function renderPainel(){
   DRILL = {};
   const role = viewerRole(); const g = role==="gestor";
@@ -1739,11 +1896,12 @@ function renderPainel(){
   const M = DB.metas;
   let mt = "";
   if(role!=="sdr"){
-    mt += metaCard("impedir","Impedi de inativar", by.risco.length, by.risco.filter(c=>c.stage==="ganho").length, M.impedir, `Base: ${by.risco.length} clientes que inativam no mês`);
+    { const RB = riscoBase(S.gf.mes||CUR_MK); mt += metaCard("impedir","Impedi de inativar", RB.grupos.length, RB.grupos.filter(g=>g.ganho).length, M.impedir, `Base fixa: ${RB.grupos.length} grupos de clientes que inativam em ${mkLabel(RB.mk)}${RB.provisoria?" (provisória até o robô levantar a base)":""}`); }
     mt += metaCard("reativar","Reativação de inativos", by.inativos.length, by.inativos.filter(c=>c.stage==="ganho").length, M.reativar, `Base: ${by.inativos.length} clientes inativos`);
     mt += metaCard("pedido","Pedido no mês (ativos)", by.ativos.length, by.ativos.filter(c=>c.stage==="ganho").length, M.pedido, `Base: ${by.ativos.length} clientes ativos`);
   }
   mt += metaCard("conv","Conversão de leads", leads.length, leads.filter(l=>l.stage==="ganho").length, M.conversao, `Base: ${leads.length} leads do período`);
+  if(role!=="sdr") h += painelRisco();
   h += `<section class="panel" style="margin-bottom:12px"><h2>Metas do mês</h2><p class="sub">Mesmo formato do "Impedi de inativar" da Pipeline de Retenção, agora para cada carteira.</p><div class="meta-grid">${mt}</div></section>`;
 
   h += `<div class="dash-grid">`;

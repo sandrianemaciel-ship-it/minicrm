@@ -12,5 +12,6 @@ service cloud.firestore {
     match /hub_presets/{id}   { allow read, write: if true; }
     match /hub_historico/{id} { allow read, write: if true; }
     match /hub_sync/{id}      { allow read: if true; }
+    match /hub_bases/{id}     { allow read: if true; }
   }
 }
