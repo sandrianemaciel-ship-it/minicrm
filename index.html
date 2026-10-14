@@ -2269,7 +2269,7 @@ function gfValues(k, it){
     case "acao": return it.acao || "—";
     case "time": { const p = person(ownerOf(it)); return p ? p.time : "—"; }
     case "vend": return ownerOf(it) || "—";
-    case "status": return (S.view==="carteira" && it.empresa===undefined) ? CART[pipeKeyOfClient(it)].sl : gfStatusOf(it);
+    case "status": return gfSoProsp() ? gfStatusOf(it) : (it.empresa===undefined ? STATUS_L[pipeKeyOfClient(it)] : null);
     case "etapa": return gfStatusOf(it);
     case "seg": return it.seg || "—";
     case "uf": return it.uf || "—";
@@ -2278,12 +2278,13 @@ function gfValues(k, it){
 }
 function gfOk(it, skip){
   const g = S.gf;
+  if(!gfSoProsp() && g.status.length && g.status.some(v=>!Object.values(STATUS_L).includes(v))) g.status = g.status.filter(v=>Object.values(STATUS_L).includes(v));
   if(g.mes!==CUR_MK && it.empresa===undefined && it.pipe==="risco") return false;
   if(S.view==="carteira" && skip!=="rapidos" && (g.rapidos||[]).length && it.empresa===undefined){ for(const r of g.rapidos){ const q = RAPIDOS.find(x=>x.k===r); if(q && !q.test(it)) return false; } }
   for(const k of ["dtinat","periodo","acao","time","vend","etapa","status","seg","uf","ofensor"]){
     if(k===skip || !g[k].length) continue;
     if(k==="periodo" && !novoCab()) continue;
-    if(k==="etapa" && S.view!=="carteira") continue;
+    if(k==="etapa" && gfSoProsp()) continue;
     if(k==="dtinat" && semDtInat()) continue;
     const v = gfValues(k, it); if(v==null || !g[k].includes(v)) return false;
   }
@@ -2312,9 +2313,9 @@ function gfOptions(k){
   else if(k==="acao") opts = ACOES.concat(["—"]).map(a=>({v:a, l:a==="—"?"Sem ação":a}));
   else if(k==="time") opts = teams().map(t=>({v:t,l:t}));
   else if(k==="vend") opts = DB.people.map(p=>({v:p.id, l:p.nome+(p.papel==="sdr"?" · SDR":"")})).concat([{v:"—", l:"Sem responsável"}]);
-  else if(k==="status" && S.view==="carteira") opts = [["inativos","Inativos"],["ativos","Ativos"],["risco","Inativariam no mês"]].map(([pk,l])=>({v:l, l, c:CART[pk].c}));
-  else if(k==="etapa") opts = CART_STAGES.map(st=>({v:st.label, l:st.label, c:st.color}));
-  else if(k==="status"){ const pks = PIPES[S.view] ? [S.view] : (S.view==="distribuicao" ? ["prospeccao"] : ["ativos","risco","inativos","prospeccao"]); const seen = new Set(); opts = []; pks.forEach(pk=>PIPES[pk].stages.forEach(s=>{ if(!seen.has(s.label)){ seen.add(s.label); opts.push({v:s.label, l:s.label, c:s.color}); } })); }
+  else if(k==="status" && !gfSoProsp()) opts = ["ativos","inativos","risco"].map(pk=>({v:STATUS_L[pk], l:STATUS_L[pk], c:CART[pk].c}));
+  else if(k==="etapa" && S.view==="carteira") opts = CART_STAGES.map(st=>({v:st.label, l:st.label, c:st.color}));
+  else if(k==="status" || k==="etapa"){ const pks = PIPES[S.view] ? [S.view] : (S.view==="distribuicao" ? ["prospeccao"] : ["ativos","risco","inativos","prospeccao"]); const seen = new Set(); opts = []; pks.forEach(pk=>PIPES[pk].stages.forEach(s=>{ if(!seen.has(s.label)){ seen.add(s.label); opts.push({v:s.label, l:s.label, c:s.color}); } })); }
   else if(k==="seg") opts = segList().map(s=>({v:s,l:s}));
   else if(k==="uf") opts = UFS_BR.map(u=>({v:u,l:u}));
   else if(k==="ofensor") opts = OFENSORES.concat(["—"]).map(o=>({v:o, l:o==="—"?"Sem ofensor":o}));
@@ -2324,7 +2325,7 @@ function gfOptions(k){
 }
 function gfFieldsFor(){
   let f = GF_FIELDS.filter(([k])=> !(k==="dtinat" && semDtInat()));
-  if(S.view==="carteira"){ const i = f.findIndex(([k])=>k==="status"); f = f.slice(0,i).concat([["etapa","Etapa do funil"]]).concat(f.slice(i)); }
+  if(!gfSoProsp()){ const i = f.findIndex(([k])=>k==="status"); f = f.slice(0,i).concat([["etapa","Etapa do funil"]]).concat(f.slice(i)); }
   return f;
 }
 // Filtros rápidos da Carteira de clientes (pela data do último faturamento vindo do ERP/Qlik).
@@ -2344,7 +2345,11 @@ const RAPIDOS = [
   {k:"inad", l:"Clientes inadimplentes no momento", test:c=> (c.inad||0) > 0}
 ];
 const GF_FIELDS = [["mes","Mês (base)"],["dtinat","Data de inativação"],["periodo","Período"],["acao","Ação"],["time","Time"],["vend","Vendedor"],["status","Status"],["seg","Segmento"],["uf","UF"],["ofensor","Ofensor"],["marc","Marcadores"]];
-function gfActiveCount(){ const g = S.gf; return (S.view==="carteira" ? (g.rapidos||[]).length + ((g.etapa||[]).length?1:0) : 0) + ["dtinat","periodo","acao","time","vend","status","seg","uf","ofensor"].reduce((a,k)=>a+(g[k].length && !(k==="dtinat" && semDtInat()) && !(k==="periodo" && !novoCab())?1:0),0) + (!novoCab() && (g.periodoR.de||g.periodoR.ate) ? 1 : 0); }
+// Status = carteira do cliente (ativos, inativos, inativam no mês). Etapa do funil = etapa do cartão.
+// Na Prospecção e na Distribuição só existem leads: lá o Status continua sendo a etapa do lead.
+const STATUS_L = {ativos:"Clientes ativos", inativos:"Clientes inativos", risco:"Clientes que inativam no mês"};
+function gfSoProsp(){ return S.view==="prospeccao" || S.view==="distribuicao"; }
+function gfActiveCount(){ const g = S.gf; return (S.view==="carteira" ? (g.rapidos||[]).length : 0) + (!gfSoProsp() && (g.etapa||[]).length ? 1 : 0) + ["dtinat","periodo","acao","time","vend","status","seg","uf","ofensor"].reduce((a,k)=>a+(g[k].length && !(k==="dtinat" && semDtInat()) && !(k==="periodo" && !novoCab())?1:0),0) + (!novoCab() && (g.periodoR.de||g.periodoR.ate) ? 1 : 0); }
 function presetsKey(){ return S.viewer; }
 function myPresets(){ DB.presets = DB.presets || {}; return DB.presets[presetsKey()] || (DB.presets[presetsKey()] = []); }
 function renderGfBar(){
