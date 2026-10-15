@@ -11,6 +11,7 @@ const admin = require("firebase-admin");
 const { fetchTable, fetchPedidos, discoverApp, discoverTestes, discoverTestes2, discoverTestes3 } = require("./qlik");
 const { mapaDePessoas, mapClientes, syncClientes, syncPessoas, isoLocal, hoje } = require("./hub");
 const R = require("./risco");
+const A = require("./analise");
 const ORGANOGRAMA = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "config", "organograma.json"), "utf8")).pessoas;
 
 const args = new Set(process.argv.slice(2));
@@ -104,7 +105,8 @@ async function main(){
       .map(p => { const o = porId.get(p.id); return o ? { ...p, campo: p.campo || o.campo, alias: [...new Set([].concat(p.alias || [], o.alias || []))] } : p; });
     const ids = new Set(pessoasHub.map(p => p.id));
     const equipe = pessoasHub.concat(ORGANOGRAMA.filter(p => !ids.has(p.id)));
-    const { clientes, porPessoa, unmapped, ignorados, foraDoOrganograma, foraNomes } = mapClientes(tabela, cfg.columnMap, mapaDePessoas(equipe));
+    const apelidos = mapaDePessoas(equipe);
+    const { clientes, porPessoa, unmapped, ignorados, foraDoOrganograma, foraNomes } = mapClientes(tabela, cfg.columnMap, apelidos);
     log(`Organograma: ${equipe.length} pessoas · ${clientes.length} clientes nas carteiras delas · ${foraDoOrganograma} clientes de fora ficaram fora do Hub.`);
     log("Clientes por pessoa: " + equipe.map(p => `${p.nome} ${porPessoa.get(p.id) || 0}`).join(" · "));
     const semCarteira = equipe.filter(p => p.papel !== "gestor" && p.papel !== "sdr" && !porPessoa.get(p.id));
@@ -128,6 +130,9 @@ async function main(){
     const cont = await syncClientes(db, clientes, { dry: DRY, log, pedidos, base, mk });
     // 3) Copia para o Hub o que a equipe preencheu na Pipeline de Retenção.
     if(pipe){ try{ await R.importarPipeline(db, pipe.fpipe, pipe.dados, { dry: DRY, log, mkAtual: mk, clientes }); }catch(e){ log("Cópia da Pipeline de Retenção não concluída: " + e.message); } }
+    // 4) Metas do mês por pessoa (toda execução) e análise por cliente: potencial/deficitário e mix (uma vez por dia).
+    try{ await A.gravarMetas(db, cfg.qlik, apelidos, { dry: DRY, log }); }catch(e){ log("Metas do Qlik não lidas: " + e.message); }
+    try{ await A.analisarClientes(db, cfg.qlik, clientes, { dry: DRY, log, forcar: args.has("--analisar") }); }catch(e){ log("Análise de clientes não concluída: " + e.message); }
     if(!DRY) await db.doc("hub_sync/status").set({ ultimaSync: new Date().toISOString(), clientes: clientes.length, novos: cont.novos, atualizados: cont.atualizados, erro: null, mes: isoLocal(hoje()).slice(0, 7) }, { merge: true });
     log("Sincronização concluída.");
   }catch(err){
