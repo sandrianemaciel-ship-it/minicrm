@@ -187,6 +187,13 @@ td input[type=checkbox], th input[type=checkbox]{accent-color:var(--accent); wid
 .bulkbar b{font-variant-numeric:tabular-nums;}
 .bulkbar select{background:var(--surface); color:var(--ink); border:0; border-radius:8px; padding:7px 8px; flex:1 1 220px; min-width:0;}
 .bulkbar .btn{border-color:transparent;}
+.mt-card{margin:0 0 12px;} .mt-head{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:baseline; margin-bottom:10px;} .mt-head h2{margin:0; font-size:15px;} .mt-head span,.mt-sub{color:var(--ink-faint); font-size:12px; font-weight:400;}
+.mt-grid{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px;} @media (max-width:900px){ .mt-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+.mt-box{background:var(--surface-2); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; min-width:0;} .mt-box small{color:var(--ink-faint); font-size:11px; text-transform:uppercase; letter-spacing:.04em;} .mt-box b{font-size:18px; font-variant-numeric:tabular-nums;} .mt-box b.ok{color:var(--good);} .mt-box span{font-size:11.5px; color:var(--ink-dim);} .mt-box.hl{background:var(--accent-soft);} .mt-box.hl b{color:var(--accent);}
+.mt-bar{height:6px; background:var(--surface-3); border-radius:4px; overflow:hidden;} .mt-bar i{display:block; height:100%;}
+.mt-team{margin:0 0 12px;} .mt-team summary{cursor:pointer; font-size:13px;} .mt-team table{margin-top:10px;} .mt-team tfoot th{text-align:left;} .mt-team .r{text-align:right;}
+.an-wrap{display:flex; flex-direction:column; gap:10px; margin:8px 0 14px;} .an-yoy{display:flex; gap:18px; align-items:center; flex-wrap:wrap; background:var(--surface-2); border-radius:10px; padding:10px 12px;} .an-yoy small{display:block; color:var(--ink-faint); font-size:11px;} .an-yoy b{font-variant-numeric:tabular-nums;}
+.an-wrap .ok{color:var(--good);} .an-wrap .neg{color:var(--bad);} .an-fin{display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px;} .an-t{font-weight:600; font-size:13px;} .an-t small{font-weight:400; color:var(--ink-faint);} .an-tab td,.an-tab th{font-size:12px;} .an-tab .r{text-align:right;} .an-cross{margin:0; padding-left:18px; font-size:12.5px; display:flex; flex-direction:column; gap:4px;}
 .selall-top{display:flex; align-items:center; gap:12px; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin:0 0 10px; font-size:13px;}
 .selall-top label{display:flex; align-items:center; gap:8px; cursor:pointer;}
 .selall-top span{color:var(--ink-dim);}
@@ -842,6 +849,7 @@ function ouvir(){
   }, err=>console.error(err));
   acompanhar(COL.pes, "p:", docId, ()=>DB.people);
   fdb.doc(COL.sync+"/status").onSnapshot(d=>{ DB.sync = d.exists ? d.data() : null; renderSyncChip(); });
+  fdb.doc(COL.sync+"/metas").onSnapshot(d=>{ DB.metasQlik = d.exists ? d.data() : null; if(S.view==="carteira") renderQuandoLivre(); }, ()=>{});
 }
 function renderQuandoLivre(){ if($("#overlay").hidden && !$("#gfpop")) render(); else S.renderPendente = true; }
 function renderSyncChip(){
@@ -1034,6 +1042,82 @@ function render(){
   renderBulk();
 }
 
+/* ---------- Metas do mês (Qlik: Vendas/Faturamento Times - Agrupada) ---------- */
+// Meta mês = Meta Comercial · Meta Ortho = 10% da Meta Comercial · por dia = falta ÷ dias úteis restantes (seg-sex, sem feriados, contando hoje).
+function diasUteisRest(ref){ const d = new Date(ref), fim = new Date(d.getFullYear(), d.getMonth()+1, 0); let n = 0; for(; d<=fim; d.setDate(d.getDate()+1)){ const w = d.getDay(); if(w && w!==6) n++; } return n; }
+function contaMeta(m, du){
+  const pctO = (DB.metasQlik && DB.metasQlik.metaOrthoPct) || 0.1;
+  const metaO = m.meta*pctO, falta = m.meta-m.vendido, faltaO = metaO-m.vendOrtho;
+  return { meta:m.meta, vendido:m.vendido, falta, pct: m.meta? m.vendido/m.meta : 0, dia: du? Math.max(0,falta)/du : 0, metaO, vendO:m.vendOrtho, faltaO, pctO: metaO? m.vendOrtho/metaO : 0, diaO: du? Math.max(0,faltaO)/du : 0 };
+}
+function metasMes(){ const M = DB.metasQlik; return M && M.mes===CUR_MK ? M : null; }
+function barraMeta(p){ const v = Math.max(0, Math.min(1, p||0)); const cor = v>=1 ? "var(--good)" : v>=0.7 ? "var(--accent)" : v>=0.4 ? "var(--warn)" : "var(--bad)"; return `<div class="mt-bar"><i style="width:${(v*100).toFixed(1)}%;background:${cor}"></i></div>`; }
+function renderMetasMes(){
+  const M = metasMes(); if(!M) return "";
+  const du = diasUteisRest(TODAY);
+  const meId = S.viewer!=="gestor" ? S.viewer : null; const me = meId && person(meId);
+  let h = "";
+  const mm = meId && M.porPessoa && M.porPessoa[meId];
+  if(mm && mm.meta>0){
+    const c = contaMeta(mm, du);
+    h += `<section class="panel mt-card" aria-label="Minha meta do mês"><div class="mt-head"><h2>Minha meta · ${mkLabel(CUR_MK)}</h2><span>${du} ${du===1?"dia útil":"dias úteis"} restantes · Qlik ${fdt(M.em)}</span></div>
+      <div class="mt-grid">
+        <div class="mt-box"><small>Meta mês</small><b>${money(c.meta)}</b>${barraMeta(c.pct)}<span>Realizado ${money(c.vendido)} · ${Math.round(c.pct*100)}%</span></div>
+        <div class="mt-box"><small>Falta p/ meta</small><b class="${c.falta<=0?"ok":""}">${c.falta<=0?"Meta batida":money(c.falta)}</b><span>${c.falta<=0?`${money(-c.falta)} acima da meta`:"pedidos (- cancelados) no mês"}</span></div>
+        <div class="mt-box hl"><small>Vender por dia</small><b>${money(c.dia)}</b><span>falta ÷ ${du} dias úteis</span></div>
+        <div class="mt-box"><small>Meta Ortho (10%)</small><b>${money(c.metaO)}</b>${barraMeta(c.pctO)}<span>Realizado Ortho ${money(c.vendO)} · ${Math.round(c.pctO*100)}%</span></div>
+        <div class="mt-box hl"><small>Ortho por dia</small><b>${money(c.diaO)}</b><span>${c.faltaO<=0?"meta Ortho batida":`falta ${money(c.faltaO)} ÷ ${du} dias`}</span></div>
+      </div></section>`;
+  }
+  // Líderes (acesso de equipe) veem o time; a gestão vê todos, respeitando os filtros de time e vendedor.
+  const lider = me && me.acesso==="equipe";
+  if(S.viewer==="gestor" || lider){
+    let ids = Object.keys(M.porPessoa||{}).filter(id=> (M.porPessoa[id].meta>0) && person(id));
+    if(lider) ids = ids.filter(id=> person(id).time===me.time);
+    const g = S.gf||{};
+    if((g.time||[]).length) ids = ids.filter(id=> g.time.includes(person(id).time));
+    if((g.vend||[]).length) ids = ids.filter(id=> g.vend.includes(id));
+    if(ids.length){
+      const linhas = ids.map(id=>({ id, p:person(id), c:contaMeta(M.porPessoa[id], du) })).sort((a,b)=> (a.p.time||"").localeCompare(b.p.time||"") || b.c.pct-a.c.pct);
+      const tot = linhas.reduce((a,l)=>({ meta:a.meta+l.c.meta, vendido:a.vendido+l.c.vendido, vendOrtho:a.vendOrtho+l.c.vendO }), {meta:0, vendido:0, vendOrtho:0});
+      const T = contaMeta(tot, du);
+      const aberto = S.metasAbertas!==false;
+      h += `<details class="panel mt-team"${aberto?" open":""} data-metas-toggle="1"><summary><b>${lider?"Metas do meu time":"Metas por vendedor"}</b> · ${linhas.length} ${linhas.length===1?"pessoa":"pessoas"} · ${Math.round(T.pct*100)}% da meta · falta ${money(Math.max(0,T.falta))} (${money(T.dia)}/dia) · Ortho ${Math.round(T.pctO*100)}% <span class="mt-sub">${du} dias úteis restantes</span></summary>
+        <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Time</th><th class="r">Meta mês</th><th class="r">Realizado</th><th>%</th><th class="r">Falta</th><th class="r">Por dia</th><th class="r">Meta Ortho</th><th class="r">Ortho realizado</th><th class="r">Ortho por dia</th></tr></thead><tbody>
+        ${linhas.map(l=>`<tr><td><b>${esc(l.p.nome)}</b></td><td>${esc(l.p.time||"—")}</td><td class="r">${money(l.c.meta)}</td><td class="r">${money(l.c.vendido)}</td><td style="min-width:110px">${barraMeta(l.c.pct)}<small>${Math.round(l.c.pct*100)}%</small></td><td class="r">${l.c.falta<=0?`<span class="chip good">batida</span>`:money(l.c.falta)}</td><td class="r"><b>${money(l.c.dia)}</b></td><td class="r">${money(l.c.metaO)}</td><td class="r">${money(l.c.vendO)} <small>(${Math.round(l.c.pctO*100)}%)</small></td><td class="r"><b>${money(l.c.diaO)}</b></td></tr>`).join("")}
+        </tbody><tfoot><tr><th>Total</th><th></th><th class="r">${money(T.meta)}</th><th class="r">${money(T.vendido)}</th><th>${Math.round(T.pct*100)}%</th><th class="r">${money(Math.max(0,T.falta))}</th><th class="r">${money(T.dia)}</th><th class="r">${money(T.metaO)}</th><th class="r">${money(T.vendO)}</th><th class="r">${money(T.diaO)}</th></tr></tfoot></table></div></details>`;
+    }
+  }
+  return h;
+}
+function fdt(iso){ if(!iso) return "—"; const d = new Date(iso); return d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}); }
+
+/* ---------- Análise do cliente (Qlik: Potenciais x Não Comprou x Deficitários e Pasta Mestre) ---------- */
+const POT_CLS = {"Potencial":"good", "Deficitário":"warn", "Não comprou":"bad"};
+function potChip(it){ const a = it.analise && it.analise.pot; return a ? `<span class="chip ${POT_CLS[a.leg]||""}" title="Pedidos ${a.per} ${a.anoAnt}: ${money(a.v25)} · ${a.ano}: ${money(a.v26)}">${a.leg}</span>` : ""; }
+function analiseHtml(it){
+  const A = it.analise; if(!A) return "";
+  const pot = A.pot, fin = A.fin;
+  let h = `<div class="sec-title">Análise comercial <small>(Qlik · atualizada em ${fd(A.dia)})</small></div><div class="an-wrap">`;
+  if(pot){
+    const d = pot.v25 ? (pot.v26-pot.v25)/pot.v25 : null;
+    h += `<div class="an-yoy"><span class="chip ${POT_CLS[pot.leg]||""}">${pot.leg}</span><div><small>Pedidos ${pot.per} ${pot.anoAnt}</small><b>${money(pot.v25)}</b></div><div><small>Pedidos ${pot.per} ${pot.ano}</small><b>${money(pot.v26)}</b></div><div><small>Variação</small><b class="${d==null?"":d>=0?"ok":"neg"}">${d==null?"novo":(d>=0?"+":"")+Math.round(d*100)+"%"}</b></div></div>`;
+  }else h += `<p class="hint">Sem pedidos de ${A.per} em ${A.ano-1} nem em ${A.ano}.</p>`;
+  if(fin) h += `<div class="an-fin"><span>Situação financeira: <b class="${/liberado/i.test(fin.sit||"")?"ok":"neg"}">${esc(fin.sit||"—")}</b></span><span>Limite: <b>${money(fin.lim)}</b>${fin.venc?` · vence ${fd(fin.venc)}`:""}</span><span>Carteira: <b>${money(fin.cart)}</b></span>${fin.vencido>0?`<span>Inadimplente: <b class="neg">${money(fin.vencido)}</b></span>`:""}</div>`;
+  if((A.mix||[]).length){
+    const gap = A.mix.reduce((a,m)=>a+m.gap,0);
+    h += `<div class="an-t">Mix sugerido · itens deficitários <small>(${A.per} ${A.ano-1} x ${A.ano}; potencial de retomada ${money(gap)})</small></div>
+      <div class="table-wrap"><table class="an-tab"><thead><tr><th>Item</th><th class="r">${A.ano-1}</th><th class="r">${A.ano}</th><th class="r">Últ. preço pago</th><th>Últ. pedido</th><th class="r">Qtd sugerida</th></tr></thead><tbody>
+      ${A.mix.map(m=>`<tr><td><b>${esc(m.item)}</b><br><small>${esc([m.linha,m.sub].filter(Boolean).join(" · "))}</small> <span class="chip ${POT_CLS[m.st]||""}">${m.st}</span></td><td class="r">${money(m.v25)}<br><small>${m.q25} un</small></td><td class="r">${money(m.v26)}<br><small>${m.q26} un</small></td><td class="r">${m.pu?money2(m.pu):"—"}</td><td>${fd(m.dt)}</td><td class="r"><b>${m.qSug}</b></td></tr>`).join("")}
+      </tbody></table></div>`;
+  }
+  if((A.cross||[]).length){
+    h += `<div class="an-t">Insight · itens que o cliente não compra e fazem sentido</div><ul class="an-cross">${A.cross.map(c=>`<li><b>${esc(c.item)}</b>${c.linha?` <small>${esc(c.linha)}</small>`:""} — ${c.tipo==="associacao"?`${Math.round(c.conf*100)}% dos clientes que compram <b>${esc(c.base)}</b> também compram este item`:`comprado por ${Math.round(c.conf*100)}% dos clientes do segmento ${esc(c.seg||"")}`}${c.pu?` · preço praticado ${money2(c.pu)}`:""}</li>`).join("")}</ul>`;
+  }
+  return h + `</div>`;
+}
+function money2(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+
 /* ---------- Pipeline ---------- */
 function stripStats(pk, list){
   const P = PIPES[pk];
@@ -1114,6 +1198,7 @@ function renderPipe(pk){
     actions += `<button class="btn primary" data-act="newLead" type="button">+ Novo lead</button>`;
   }
   let h = `<div class="view-head"><div><h1>${P.label}</h1><p>${esc(P.desc)}</p></div><div class="actions">${actions}</div></div>`;
+  if(pk==="carteira") h += renderMetasMes();
   h += renderFilters(pk, all);
   h += stripStats(pk, list);
   if(pk==="prospeccao") h += renderSegKpi(all);
@@ -1149,6 +1234,7 @@ function cardBadges(pk, it){
     if(!it.owner) b.push(`<span class="chip warn">sem responsável</span>`);
   }
   if(it.ofensor && (st.end==="lost" || pk!=="prospeccao")) b.push(`<span class="chip bad" title="Ofensor">${esc(it.ofensor)}</span>`);
+  if(it.empresa===undefined){ const pc = potChip(it); if(pc) b.push(pc); }
   return b.join("");
 }
 function proxLabel(it){
@@ -1562,6 +1648,7 @@ function openClientDetail(it){
   openModal(`<div class="m-head"><div><h2>${esc(it.cli)}</h2><p>Cód ${it.cod} · ${esc(it.cid).toUpperCase()}/${it.uf} · ${esc(it.seg)}${ed?"":" · somente leitura"}</p></div><button class="x" data-act="close" type="button" aria-label="Fechar">×</button></div>
     <div class="m-body">
       ${avisos}<div class="sec-title">Referência (base ERP)</div>${refH}
+      ${analiseHtml(it)}
       <div class="sec-title">Estágio no pipeline <small>(clique para mover — abre o registro obrigatório da movimentação)</small></div>${pills}
       <div class="sec-title">Contato</div>${contato}
       ${ofSelectHtml("d-of", it.ofensor, false, ofListOf(it))}
@@ -2567,6 +2654,7 @@ document.addEventListener("click", e=>{
   const mv = t.closest("[data-move]");
   if(mv){ if(mv.disabled) return; const id = $("[data-act=saveDetail]")?.dataset.id; if(id){ const it = findItem(id); closeModal(); requestMove(it.id, mv.dataset.move); } return; }
   if(t.matches("[data-sel]")){ const id=t.dataset.sel; t.checked? S.selected.add(id): S.selected.delete(id); render(); return; }
+  const mtg = t.closest("[data-metas-toggle] > summary"); if(mtg){ setTimeout(()=>{ S.metasAbertas = mtg.parentElement.open; }, 0); }
   if(t.matches("[data-selcol]")){ const k = t.dataset.selcol; bulkList().filter(i=>i.stage===k).forEach(i=> t.checked? S.selected.add(i.id): S.selected.delete(i.id)); render(); return; }
   if(t.matches("[data-selall]")){ const list = bulkList(); list.forEach(i=> t.checked? S.selected.add(i.id): S.selected.delete(i.id)); render(); return; }
   const og = t.closest("[data-owner-go]");

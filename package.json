@@ -7,7 +7,7 @@
     "sync": "node sync/index.js",
     "simular": "node sync/index.js --dry-run",
     "reconhecer": "node sync/index.js --reconhecer",
-    "test": "node sync/teste.js && node sync/teste-risco.js"
+    "test": "node sync/teste.js && node sync/teste-risco.js && node sync/teste-analise.js"
   },
   "engines": { "node": ">=18" },
   "dependencies": {
