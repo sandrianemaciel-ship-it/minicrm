@@ -759,7 +759,7 @@ const js = o => JSON.stringify(o);
 const limpo = o => JSON.parse(JSON.stringify(o)); // tira os "undefined", que o Firestore recusa
 function blankDB(){
   return { v:3, clients:[], leads:[], people:[], segmentos: SEG_QLIK.slice(), origens: ORIGENS.map(o=>({...o})),
-    metas:{impedir:70, reativar:15, pedido:60, conversao:12}, gestores: GESTORES_PADRAO.slice(), anexos:{}, presets:{}, historico:[], sync:null };
+    metas:{impedir:70, reativar:15, pedido:60, conversao:12}, gestores: GESTORES_PADRAO.slice(), anexos:{}, presets:{}, historico:[], sync:null, anal:{} };
 }
 function cfgObj(){ return {segmentos:DB.segmentos, origens:DB.origens, metas:DB.metas, gestores:DB.gestores, organogramaV:DB.organogramaV||0}; }
 const docCli = d => { const o = d.data(); o.cod = o.cod || d.id; o.id = "c"+d.id; return o; };
@@ -767,15 +767,15 @@ const docId = d => ({...d.data(), id:d.id});
 const semId = o => { const c = {...o}; delete c.id; return c; };
 async function loadAll(){
   const [cs, ls, ps, cfg, hs, st, pr, bs] = await Promise.all([
-    Promise.resolve(null), Promise.resolve(null), fdb.collection(COL.pes).get(),
-    fdb.doc(COL.cfg+"/geral").get(), fdb.collection(COL.hist).get(), fdb.doc(COL.sync+"/status").get(), fdb.collection(COL.preset).get(),
+    Promise.resolve(null), Promise.resolve(null), carregarPessoas(),
+    fdb.doc(COL.cfg+"/geral").get(), fdb.collection(COL.hist).where("mk", ">=", (()=>{ const d = new Date(TODAY.getFullYear(), TODAY.getMonth()-6, 1); return iso(d).slice(0,7); })()).get(), fdb.doc(COL.sync+"/status").get(), fdb.collection(COL.preset).get(),
     fdb.collection(COL.base).get().catch(()=>({docs:[]}))]);
   DB = blankDB();
   // Bases fixas dos clientes que inativam no mês (levantadas pelo robô no dia 1, uma por mês).
   DB.bases = {}; bs.docs.forEach(d=>{ DB.bases[d.id] = d.data(); });
   DB.clients = []; // carregados depois do login, só os que a pessoa pode ver (carregarClientes)
   DB.leads = []; // carregados depois do login, junto com os clientes
-  DB.people = ps.docs.map(docId);
+  DB.people = ps;
   if(cfg.exists){ const c = cfg.data(); ["segmentos","origens","metas","gestores","organogramaV"].forEach(k=>{ if(c[k]) DB[k] = c[k]; }); }
   DB.historico = hs.docs.map(d=>d.data()).filter(h=>h.mk && h.mk < iso(TODAY).slice(0,7)).sort((a,b)=>a.mk.localeCompare(b.mk)).slice(-5);
   DB.sync = st.exists ? st.data() : null;
@@ -798,7 +798,20 @@ async function gravar(){
   dif("cfg", cfgObj(), fdb.doc(COL.cfg+"/geral"), cfgObj());
   Object.entries(DB.presets).forEach(([k,v])=> dif("pr:"+k, v, fdb.doc(COL.preset+"/"+k), {lista:v}));
   Object.entries(DB.anexos).forEach(([id,a])=>{ if(!SNAP.has("a:"+id)){ ops.push([fdb.doc(COL.anexo+"/"+id), a]); SNAP.set("a:"+id, "1"); } });
-  for(let i=0;i<ops.length;i+=400){ const b = fdb.batch(); ops.slice(i,i+400).forEach(([ref,data])=>b.set(ref, limpo(data))); await b.commit(); }
+  for(let i=0;i<ops.length;i+=400){ const b = fdb.batch(); ops.slice(i,i+400).forEach(([ref,data])=>b.set(ref, comUpd(ref, limpo(data)))); await b.commit(); }
+}
+// Clientes e leads gravados levam "upd" (hora do servidor): os outros aparelhos baixam só o que mudou.
+const TS = () => firebase.firestore.FieldValue.serverTimestamp();
+const toMs = v => v && typeof v.toMillis==="function" ? v.toMillis() : v;
+function comUpd(ref, data){ const p = ref.path||""; return (p.startsWith(COL.cli+"/") || p.startsWith(COL.lead+"/") || p.startsWith(COL.pes+"/")) ? Object.assign(data, {upd: TS()}) : data; }
+// Pessoas: cópia no aparelho + só as alteradas depois dela.
+async function carregarPessoas(){
+  let c = await IDB.get("pessoas");
+  const juntar = qs => qs.docs.forEach(d=>{ const o = {...d.data(), id:d.id}; o.upd = toMs(o.upd); c.itens[o.id] = o; if(o.upd && o.upd > (c.wm||0)) c.wm = o.upd; });
+  if(c && c.itens) juntar(await fdb.collection(COL.pes).where("upd", ">", firebase.firestore.Timestamp.fromMillis(c.wm||0)).get());
+  else { c = { wm:0, itens:{} }; juntar(await fdb.collection(COL.pes).get()); }
+  S.pesWm = c.wm; IDB.set("pessoas", c);
+  return Object.values(c.itens).map(p=>({...p}));
 }
 // Anexos (prints, áudios, imagens de exemplo) são buscados só quando um cartão abre.
 async function carregarAnexo(id){
@@ -836,10 +849,126 @@ function escutar(consulta, prefixo, conv, lista){
     }, err=>{ console.error(err); if(primeira){ primeira = false; resolve(); } });
   });
 }
+/* ---------- Carteira em pacotes + cópia no aparelho (economia de leituras do Firebase) ----------
+   1) Lê hub_sync/pacotes (1 leitura): diz quais pacotes existem e quando foram montados (uma vez por dia, pelo robô).
+   2) Se o aparelho já tem a carteira daquela montagem, usa a cópia local; senão baixa só os pacotes de quem a pessoa pode ver.
+   3) Depois busca apenas os clientes com "upd" mais novo que o que já tem (o que o robô ou a equipe mudou).
+   Sem hub_sync/pacotes (robô ainda não montou), volta ao modo anterior: lê cliente por cliente. */
+const IDB = (()=>{ let p = null;
+  const abrir = () => p || (p = new Promise(res=>{ try{ const r = indexedDB.open("hub-comercial", 1); r.onupgradeneeded = ()=>r.result.createObjectStore("kv"); r.onsuccess = ()=>res(r.result); r.onerror = ()=>res(null); }catch(e){ res(null); } }));
+  return {
+    get: async k => { const db = await abrir(); if(!db) return null; return new Promise(res=>{ try{ const t = db.transaction("kv").objectStore("kv").get(k); t.onsuccess = ()=>res(t.result ?? null); t.onerror = ()=>res(null); }catch(e){ res(null); } }); },
+    set: async (k, v) => { const db = await abrir(); if(!db) return; return new Promise(res=>{ try{ const tx = db.transaction("kv","readwrite"); tx.objectStore("kv").put(v, k); tx.oncomplete = ()=>res(); tx.onerror = ()=>res(); }catch(e){ res(); } }); }
+  };
+})();
+const slugVend = v => String(v||"sem-vendedor").toLowerCase().replace(/[^a-z0-9-]+/g,"-").slice(0,60) || "sem-vendedor";
+function idsVisiveis(){
+  if(S.identAcc==="gestor") return null; // todos
+  const me = person(S.identAcc);
+  return new Set(DB.people.filter(p=> p.id===S.identAcc || (me && me.acesso==="equipe" && me.time && p.time===me.time)).map(p=>p.id));
+}
+const resumoAnalise = a => a ? { pot: a.pot||null, dia: a.dia||null } : null;
+function cliDoPacote(o){ const c = {...o}; const id = c._id; delete c._id; c.cod = c.cod || id; c.id = "c"+id; return c; }
+function cliDoDoc(d){ const o = d.data(); Object.keys(o).forEach(k=>{ o[k] = toMs(o[k]); }); o.analise = resumoAnalise(o.analise); o.cod = o.cod || d.id; o.id = "c"+d.id; return o; }
+let salvarCacheT = null;
+function salvarCache(){ clearTimeout(salvarCacheT); salvarCacheT = setTimeout(()=>{ if(S.cacheCli) IDB.set(S.cacheCli.chave, S.cacheCli); if(S.cacheLeads) IDB.set("leads", S.cacheLeads); }, 1500); }
 async function carregarClientes(){
-  await Promise.all(consultasDeClientes().map(q=> escutar(q, "c:", docCli, ()=>DB.clients))
-    .concat([escutar(fdb.collection(COL.lead), "l:", docId, ()=>DB.leads)]));
+  let pac = null;
+  try{ const d = await fdb.doc(COL.sync+"/pacotes").get(); pac = d.exists ? d.data() : null; }catch(e){ console.error(e); }
+  if(!pac || !pac.indice || !pac.builtAt){
+    S.modoPacotes = false;
+    await Promise.all(consultasDeClientes().map(q=> escutar(q, "c:", docCli, ()=>DB.clients)).concat([carregarLeads()]));
+    if(S.identAcc==="gestor") gravarHistoricoDoMes();
+    return;
+  }
+  S.modoPacotes = true; DB.pac = pac;
+  const vis = idsVisiveis();
+  const vends = Object.keys(pac.indice).filter(v=> !vis || [...vis].some(id=>slugVend(id)===v)).sort();
+  const chave = "cli:"+(S.identAcc||"");
+  let cache = await IDB.get(chave);
+  const ids = vends.flatMap(v=>pac.indice[v]||[]);
+  if(!cache || cache.builtAt!==pac.builtAt || cache.escopo!==vends.join(",")){
+    const docs = await Promise.all(ids.map(id=>fdb.doc(COL.sync+"/"+id).get()));
+    const clientes = {}; docs.forEach(d=>{ if(d.exists) (d.data().itens||[]).forEach(o=>{ clientes[o._id] = o; }); });
+    cache = { chave, builtAt:pac.builtAt, escopo:vends.join(","), wm:pac.builtAt, clientes };
+    S.pacInfo = { baixados:ids.length, total:ids.length };
+  } else S.pacInfo = { baixados:0, total:ids.length };
+  Object.keys(pac.removidos||{}).forEach(id=>{ delete cache.clientes[id]; });
+  S.cacheCli = cache;
+  DB.clients = Object.values(cache.clientes).map(cliDoPacote).filter(c=> !vis || vis.has(c.vend));
+  DB.clients.forEach(c=>SNAP.set("c:"+c.id, js(c)));
+  await Promise.all([escutarMudancasClientes(cache, vis), carregarLeads()]);
+  salvarCache(); renderSyncChip();
   if(S.identAcc==="gestor") gravarHistoricoDoMes();
+}
+// Só os clientes alterados depois do que o aparelho já tem (upd > marca d'água).
+function escutarMudancasClientes(cache, vis){
+  return new Promise(resolve=>{
+    let primeira = true; const desde = cache.wm;
+    fdb.collection(COL.cli).where("upd", ">", firebase.firestore.Timestamp.fromMillis(desde)).onSnapshot(qs=>{
+      let mudou = false; S.pacInfo = Object.assign(S.pacInfo||{}, { mudancas:qs.size });
+      qs.docChanges().forEach(ch=>{
+        if(ch.doc.metadata.hasPendingWrites || ch.type==="removed") return;
+        const o = cliDoDoc(ch.doc); const pid = ch.doc.id; const k = "c:"+o.id;
+        const ant = cache.clientes[pid];
+        if(ant && ant.analise && (!o.analise || String(ant.analise.dia||"") > String(o.analise.dia||""))) o.analise = ant.analise; // o pacote do dia tem a análise mais nova
+        if(o.upd > cache.wm) cache.wm = o.upd;
+        const i = DB.clients.findIndex(x=>x.id===o.id);
+        if(vis && !vis.has(o.vend)){ delete cache.clientes[pid]; if(i>=0){ DB.clients.splice(i,1); mudou = true; } SNAP.delete(k); return; }
+        const plano = {...o, _id:pid}; delete plano.id; cache.clientes[pid] = plano;
+        const j = js(o); if(SNAP.get(k)===j) return;
+        SNAP.set(k, j); if(i>=0) DB.clients[i] = o; else DB.clients.push(o); mudou = true;
+      });
+      salvarCache();
+      if(primeira){ primeira = false; resolve(); } else if(mudou) renderQuandoLivre();
+    }, err=>{ console.error(err); if(primeira){ primeira = false; resolve(); } });
+  });
+}
+// Leads: cópia no aparelho + só os alterados depois dela. Lead excluído fica marcado ("excluido") e some de todos os aparelhos.
+async function carregarLeads(){
+  let cache = await IDB.get("leads");
+  const aplicar = (qs, cache) => { let mudou = false;
+    qs.docChanges().forEach(ch=>{
+      if(ch.doc.metadata.hasPendingWrites) return;
+      const o = {...ch.doc.data(), id:ch.doc.id}; o.upd = toMs(o.upd); const k = "l:"+o.id;
+      const i = DB.leads.findIndex(x=>x.id===o.id);
+      if(o.upd && o.upd > (cache.wm||0)) cache.wm = o.upd;
+      if(ch.type==="removed" || o.excluido){ delete cache.leads[o.id]; if(i>=0){ DB.leads.splice(i,1); mudou = true; } SNAP.delete(k); return; }
+      cache.leads[o.id] = o;
+      const j = js(o); if(SNAP.get(k)===j) return;
+      SNAP.set(k, j); if(i>=0) DB.leads[i] = o; else DB.leads.push(o); mudou = true;
+    });
+    salvarCache(); return mudou; };
+  const consulta = cache && cache.leads ? fdb.collection(COL.lead).where("upd", ">", firebase.firestore.Timestamp.fromMillis(cache.wm||0)) : fdb.collection(COL.lead);
+  if(cache && cache.leads){ DB.leads = Object.values(cache.leads).map(l=>({...l})); DB.leads.forEach(l=>SNAP.set("l:"+l.id, js(l))); }
+  else cache = { wm:0, leads:{} };
+  S.cacheLeads = cache;
+  return new Promise(resolve=>{ let primeira = true;
+    consulta.onSnapshot(qs=>{ const m = aplicar(qs, cache); if(primeira){ primeira = false; resolve(); } else if(m) renderQuandoLivre(); },
+      err=>{ console.error(err); if(primeira){ primeira = false; resolve(); } });
+  });
+}
+// Análise comercial completa (mix, insight, série mensal): pacotes próprios, baixados só quando precisa (DB.anal).
+const anCarregado = new Set(); const anCarregando = new Map();
+function analiseDe(c){ if(!c) return null; const id = String(c.id||"").slice(1); return (DB.anal||{})[id] || c.analise || null; }
+function analiseCompleta(c){ const a = analiseDe(c); return !!(a && (a.mix || a.serie || a.fin)); }
+function garantirAnalise(vends){
+  const pac = DB.pac; if(!S.modoPacotes || !pac || !pac.anIndice) return Promise.resolve(false);
+  const falta = [...new Set(vends)].filter(v=>!anCarregado.has(v) && pac.anIndice[v]);
+  if(!falta.length) return Promise.resolve(false);
+  return Promise.all(falta.map(v=>{
+    if(anCarregando.has(v)) return anCarregando.get(v);
+    const pr = (async ()=>{
+      let c = await IDB.get("an:"+v);
+      if(!c || c.dia!==pac.anDia){
+        const docs = await Promise.all((pac.anIndice[v]||[]).map(id=>fdb.doc(COL.sync+"/"+id).get()));
+        const itens = {}; docs.forEach(d=>{ if(d.exists) Object.assign(itens, d.data().itens||{}); });
+        c = { dia:pac.anDia, itens }; IDB.set("an:"+v, c);
+      }
+      Object.assign(DB.anal, c.itens); anCarregado.add(v);
+    })().catch(e=>console.error(e));
+    anCarregando.set(v, pr); return pr;
+  })).then(()=>true);
 }
 // O resultado do mês (gráfico de evolução do Dashboard) é registrado quando alguém da gestão abre o Hub.
 function gravarHistoricoDoMes(){
@@ -864,7 +993,7 @@ function ouvir(){
     });
     if(mudou) renderQuandoLivre();
   }, err=>console.error(err));
-  acompanhar(COL.pes, "p:", docId, ()=>DB.people);
+  acompanhar(fdb.collection(COL.pes).where("upd", ">", firebase.firestore.Timestamp.fromMillis(S.pesWm||0)), "p:", d=>{ const o = docId(d); o.upd = toMs(o.upd); return o; }, ()=>DB.people);
   fdb.doc(COL.sync+"/status").onSnapshot(d=>{ DB.sync = d.exists ? d.data() : null; renderSyncChip(); });
   fdb.doc(COL.sync+"/metas").onSnapshot(d=>{ DB.metasQlik = d.exists ? d.data() : null; if(S.view==="carteira") renderQuandoLivre(); }, ()=>{});
 }
@@ -875,6 +1004,7 @@ function renderSyncChip(){
   let cor = "#f2ab3f", txt = "Qlik · aguardando a 1ª sincronização", tip = "A carteira é preenchida pelo robô de sincronização (GitHub Actions).";
   if(st && st.erro){ cor = "#ff6b76"; txt = "Qlik · falha na última sincronização"; tip = st.erro; }
   else if(st && st.ultimaSync){ cor = "#5be3a6"; const d = new Date(st.ultimaSync); txt = "Qlik · atualizado "+d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}); tip = `${st.clientes||0} clientes lidos na última sincronização.`; }
+  if(S.modoPacotes && S.pacInfo){ const pi = S.pacInfo; tip += ` · Carteira: ${pi.baixados? `${pi.baixados} de ${pi.total} pacotes baixados agora` : `${pi.total} pacotes já guardados neste aparelho`}${pi.mudancas!=null?`, ${pi.mudancas} clientes alterados desde a montagem do dia`:""}.`; }
   el.innerHTML = `<span class="dot" style="background:${cor}"></span>${esc(txt)}`; el.title = tip;
 }
 function lsGet(k,def){ try{ const v = localStorage.getItem(k); return v==null? def : v; }catch(e){ return def; } }
@@ -1114,9 +1244,13 @@ function fdt(iso){ if(!iso) return "—"; const d = new Date(iso); return d.toLo
 
 /* ---------- Análise do cliente (Qlik: Potenciais x Não Comprou x Deficitários e Pasta Mestre) ---------- */
 const POT_CLS = {"Potencial":"good", "Deficitário":"warn", "Não comprou":"bad"};
-function potChip(it){ const a = it.analise && it.analise.pot; return a ? `<span class="chip ${POT_CLS[a.leg]||""}" title="Pedidos ${a.per} ${a.anoAnt}: ${money(a.v25)} · ${a.ano}: ${money(a.v26)}">${a.leg}</span>` : ""; }
+function potChip(it){ const a = analiseDe(it) && analiseDe(it).pot; return a ? `<span class="chip ${POT_CLS[a.leg]||""}" title="Pedidos ${a.per} ${a.anoAnt}: ${money(a.v25)} · ${a.ano}: ${money(a.v26)}">${a.leg}</span>` : ""; }
 function analiseHtml(it){
-  const A = it.analise; if(!A) return "";
+  if(S.modoPacotes && !analiseCompleta(it) && DB.pac && DB.pac.anIndice && DB.pac.anIndice[slugVend(it.vend)]){
+    garantirAnalise([slugVend(it.vend)]).then(()=>{ const box = document.getElementById("an-box"); if(box && box.dataset.id===it.id) box.outerHTML = analiseHtml(it); });
+    return `<div id="an-box" data-id="${it.id}" class="hint" style="padding:10px 0">Carregando a análise comercial deste cliente…</div>`;
+  }
+  const A = analiseDe(it); if(!A) return "";
   const pot = A.pot, fin = A.fin;
   let h = `<div class="sec-title">Análise comercial <small>(Qlik · atualizada em ${fd(A.dia)})</small></div><div class="an-wrap">`;
   if(pot){
@@ -1166,7 +1300,7 @@ function gerClientes(){
 }
 // Números de um cliente na métrica e no período de referência escolhidos.
 function gerNum(c, G){
-  const s = c.analise && c.analise.serie; const ref = GER_REF[G.ref];
+  const s = analiseDe(c) && analiseDe(c).serie; const ref = GER_REF[G.ref];
   if(!s || !s.meses || !(s[G.met]||[]).length) return { ok:false, ref:0, np:0, comp:0, real:0, npReal:0, pico:0, meses:[] };
   const arr = s[G.met], np = s.np || [];
   const ref0 = ref.idx.reduce((a,i)=>a+(arr[i]||0),0)/ref.idx.length;
@@ -1185,13 +1319,13 @@ function gerAgg(lista, G){
   for(const c of lista){
     a.vends.add(c.vend);
     if(c.pipe==="ativo") a.ativos++; else if(c.pipe==="risco") a.risco++; else a.inativos++;
-    const s = c.analise && c.analise.serie;
+    const s = analiseDe(c) && analiseDe(c).serie;
     if(s && noMes(s.dtReat, CUR_MK)) a.reat++;
     if(s && noMes(s.dtPri, CUR_MK)) a.novos++;
     const n = gerNum(c, G); if(!n.ok){ a.semSerie++; continue; }
     a.ref += n.ref; a.np += n.np; a.compr += n.comp; a.real += n.real; a.npReal += n.npReal;
     a.headroom += Math.max(0, n.pico - n.ref);
-    const p = c.analise.pot; if(p && G.met==="ped" && p.v25>p.v26){ const fim = String(p.per||"").split("-")[1]; const meses = (fim && MONTHS.findIndex(m=>m.startsWith(fim))+1) || 9; a.retomada += (p.v25-p.v26)/meses; }
+    const p = analiseDe(c) && analiseDe(c).pot; if(p && G.met==="ped" && p.v25>p.v26){ const fim = String(p.per||"").split("-")[1]; const meses = (fim && MONTHS.findIndex(m=>m.startsWith(fim))+1) || 9; a.retomada += (p.v25-p.v26)/meses; }
   }
   a.ticketCli = a.compr ? a.ref/a.compr : 0;  // por cliente comprador no mês
   a.ticketPed = a.np ? a.ref/a.np : 0;         // por pedido
@@ -1203,13 +1337,13 @@ function metaQlikDe(vendIds){ const M = metasMes(); if(!M) return null; let t = 
 function gerTickets(lista, G){
   const novos = [], reat = [], inat = [];
   for(const c of lista){
-    const s = c.analise && c.analise.serie; if(!s || !s.meses) continue;
+    const s = analiseDe(c) && analiseDe(c).serie; if(!s || !s.meses) continue;
     const arr = s[G.met] || [];
     // média mensal do cliente do mês da entrada (ou reativação) até o último mês fechado
     const media = desde => { const i0 = s.meses.findIndex((mk,i)=>i>=1 && mk>=desde); if(i0<1) return null; const v = arr.slice(i0,7); return v.length ? v.reduce((a,b)=>a+(b||0),0)/v.length : null; };
     if(s.dtPri && s.dtPri.slice(0,7)>=s.meses[1] && s.dtPri.slice(0,7)<CUR_MK){ const m = media(s.dtPri.slice(0,7)); if(m>0) novos.push(m); }
     if(s.dtReat && s.dtReat.slice(0,7)>=s.meses[1] && s.dtReat.slice(0,7)<CUR_MK){ const m = media(s.dtReat.slice(0,7)); if(m>0) reat.push(m); }
-    if(c.pipe==="inativo" && c.analise.pot && c.analise.pot.v25>0 && G.met==="ped") inat.push(c.analise.pot.v25/9);
+    const pt = analiseDe(c) && analiseDe(c).pot; if(c.pipe==="inativo" && pt && pt.v25>0 && G.met==="ped") inat.push(pt.v25/9);
   }
   const med = a => { if(!a.length) return null; const s = a.slice().sort((x,y)=>x-y); const k = Math.floor(s.length/2); return s.length%2 ? s[k] : (s[k-1]+s[k])/2; };
   const tn = med(novos), tr = med(reat) || med(inat);
@@ -1224,12 +1358,20 @@ function renderGerencial(){
   if(!podeGerencial()) return `<div class="view-head"><div><h1>Visão gerencial</h1><p>Disponível para líderes, supervisores e gerentes.</p></div></div>`;
   const G = gerS();
   const lista = gerClientes();
+  if(S.modoPacotes){
+    const vs = [...new Set(lista.map(c=>slugVend(c.vend)))];
+    if(vs.some(v=>!anCarregado.has(v) && DB.pac && DB.pac.anIndice && DB.pac.anIndice[v])){
+      garantirAnalise(vs).then(()=>{ if(S.view==="gerencial") render(); });
+      return `<div class="view-head"><div><h1>Visão gerencial da carteira</h1><p>Carregando o histórico mensal da carteira… (baixado uma vez por dia e guardado neste aparelho)</p></div></div>`;
+    }
+  }
   const A = gerAgg(lista, G);
   const tk = gerTickets(lista, G);
-  const meses = (lista.find(c=>c.analise&&c.analise.serie&&c.analise.serie.meses)||{analise:{serie:{meses:[]}}}).analise.serie.meses;
+  const comSerie = lista.find(c=>{ const a = analiseDe(c); return a && a.serie && a.serie.meses; });
+  const meses = comSerie ? analiseDe(comSerie).serie.meses : [];
   const refMeses = GER_REF[G.ref].idx.map(i=>meses[i]).filter(Boolean);
   const refLbl = refMeses.length ? (refMeses.length===1 ? mkCurto(refMeses[0]) : `${mkCurto(refMeses[0])} a ${mkCurto(refMeses[refMeses.length-1])}`) : "sem dados";
-  const atual = (lista.find(c=>c.analise&&c.analise.dia)||{analise:{}}).analise.dia;
+  const comDia = lista.find(c=>analiseDe(c) && analiseDe(c).dia); const atual = comDia ? analiseDe(comDia).dia : null;
   const vendIds = Array.from(A.vends);
   const metaQ = metaQlikDe(vendIds);
   const meta = G.meta!=null ? G.meta : (metaQ||0);
@@ -2121,7 +2263,8 @@ async function excluirLeads(ids){
   ids.forEach(id=>{ S.selected.delete(id); SNAP.delete("l:"+id); });
   S.delIds = null; closeModal(); render();
   try{
-    for(let i=0;i<ids.length;i+=400){ const b = fdb.batch(); ids.slice(i,i+400).forEach(id=> b.delete(fdb.doc(COL.lead+"/"+id))); await b.commit(); }
+    const em = new Date().toISOString(), por = autorAtual();
+    for(let i=0;i<ids.length;i+=400){ const b = fdb.batch(); ids.slice(i,i+400).forEach(id=> b.set(fdb.doc(COL.lead+"/"+id), {excluido:true, excluidoEm:em, excluidoPor:por, upd:TS()}, {merge:true})); await b.commit(); }
     fdb.collection(COL.hist).add({ tipo:"exclusao_leads", d:new Date().toISOString(), por:autorAtual(), qtd:ids.length, leads:removidos.slice(0,200).map(l=>({id:l.id, empresa:l.empresa, owner:l.owner||null})) }).catch(()=>{});
     toast(`${ids.length} ${ids.length===1?"lead excluído":"leads excluídos"}.`);
   }catch(e){
