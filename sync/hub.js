@@ -2,6 +2,9 @@
 // Converte a tabela de clientes do Qlik no formato da Carteira de clientes do Hub
 // e grava no Firestore (coleções hub_*), sem apagar o que os vendedores preencheram.
 const L = require("./logic");
+const { FieldValue } = require("firebase-admin/firestore");
+// Todo cliente gravado leva "upd" (hora do servidor): a página baixa só o que mudou desde a última vez.
+const comUpd = (ref, data) => (ref && ref.path && /^hub_(clientes|pessoas)\//.test(ref.path) && data) ? { ...data, upd: FieldValue.serverTimestamp() } : data;
 
 const NUM_FIELDS = new Set(["pedPend", "valVenc"]);
 const DATE_FIELDS = new Set(["dtCad", "dt1Fat", "dtUltFat", "dtInat", "dtUltPedAberto"]);
@@ -109,7 +112,7 @@ async function commitEmLotes(db, ops, dry){
   if(dry) return;
   for(let i = 0; i < ops.length; i += 400){
     const b = db.batch();
-    ops.slice(i, i + 400).forEach(([ref, data, merge]) => merge ? b.set(ref, data, { merge: true }) : b.set(ref, data));
+    ops.slice(i, i + 400).forEach(([ref, data, merge]) => merge ? b.set(ref, comUpd(ref, data), { merge: true }) : b.set(ref, comUpd(ref, data)));
     await b.commit();
   }
 }
@@ -130,10 +133,14 @@ async function syncPessoas(db, organograma, { dry, log }){
 // Só lê um cliente do banco quando a carteira ou o vendedor mudou, e só grava quem mudou de verdade.
 function hash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16); }
 const POR_PARTE = 4000;
+// Lê só os documentos do índice (hub_sync/indice_0, _1…), sem varrer a coleção hub_sync, que também guarda os pacotes.
 async function lerIndice(db){
-  const snap = await db.collection("hub_sync").get();
   const m = new Map(); let partes = 0;
-  snap.docs.forEach(d => { if(d.id.startsWith("indice_")){ partes++; Object.entries(d.data().m || {}).forEach(([k, v]) => m.set(k, v)); } });
+  for(let i = 0; i < 50; i++){
+    const d = await db.doc("hub_sync/indice_" + i).get();
+    if(!d.exists) break;
+    partes++; Object.entries(d.data().m || {}).forEach(([k, v]) => m.set(k, v));
+  }
   return { m, partes };
 }
 async function gravarIndice(db, m, partesAntes){
@@ -234,14 +241,17 @@ async function syncClientes(db, clientes, { dry, log, pedidos, base, mk }){
   if(!dry){
     for(let i = 0; i < ops.length; i += 400){
       const b = db.batch();
-      ops.slice(i, i + 400).forEach(([ref, data, modo]) => modo === "delete" ? b.delete(ref) : modo ? b.set(ref, data, { merge: true }) : b.set(ref, data));
+      ops.slice(i, i + 400).forEach(([ref, data, modo]) => modo === "delete" ? b.delete(ref) : modo ? b.set(ref, comUpd(ref, data), { merge: true }) : b.set(ref, comUpd(ref, data)));
       await b.commit();
     }
     await gravarIndice(db, novoIdx, partes);
+    // Removidos: a página tira da tela mesmo antes da próxima montagem dos pacotes.
+    const rem = ops.filter(o => o[2] === "delete").map(o => o[0].path.split("/").pop());
+    if(rem.length){ const o = {}; rem.forEach(id => { o[id] = Date.now(); }); await db.doc("hub_sync/pacotes").set({ removidos: o }, { merge: true }); }
   }
   log(`Clientes: ${clientes.length} lidos · ${cont.novos} novos · ${cont.atualizados} atualizados · ${cont.iguais} sem mudança · ${cont.removidos} removidos (saíram do organograma)${cont.mantidosFora ? ` · ${cont.mantidosFora} fora do organograma mantidos por já terem CRM ou etapa` : ""}.`);
   log(`Carteira: ${cont.ativo} ativos · ${cont.risco} inativariam no mês · ${cont.inativo} inativos. Gravações no banco: ${ops.length}.`);
   return cont;
 }
 
-module.exports = { mapaDePessoas, mapClientes, syncClientes, syncPessoas, docIdCod, classificar, isoLocal, hoje, hash, pedidoInfo, lerVarios, commitEmLotes, PIPE_LABEL };
+module.exports = { comUpd, mapaDePessoas, mapClientes, syncClientes, syncPessoas, docIdCod, classificar, isoLocal, hoje, hash, pedidoInfo, lerVarios, commitEmLotes, PIPE_LABEL };

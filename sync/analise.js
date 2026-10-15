@@ -242,13 +242,14 @@ async function analisarClientes(db, cfg, clientes, { dry, log = console.log, ref
     cont[potO ? potO.leg : "sem"]++;
     const analise = { dia, per: refTxt, ano: pot.ano, pot: potO, fin: pm.fin.get(k) || null, mix: mixSugerido(porCli.get(k) || []), cross: cruzadas(k) };
     if(serie){ const sr = serie.mapa.get(k); analise.serie = sr ? Object.assign({ meses: serie.meses }, sr) : { meses: serie.meses, fat: [], ped: [], np: [], dtPri: null, dtReat: null }; }
-    return [db.doc("hub_clientes/" + docIdCod(c.cod)), { analise }, true];
+    return [docIdCod(c.cod), analise];
   });
   log(`Análise de clientes: ${cont.Potencial} potenciais · ${cont["Deficitário"]} deficitários · ${cont["Não comprou"]} não compraram · ${cont.sem} sem pedidos em ${refTxt} dos dois anos.`);
-  log(`Mix sugerido para ${ops.filter(o => o[1].analise.mix.length).length} clientes · itens novos sugeridos para ${ops.filter(o => o[1].analise.cross.length).length}.`);
-  await commitEmLotes(db, ops, dry);
+  log(`Mix sugerido para ${ops.filter(o => o[1].mix.length).length} clientes · itens novos sugeridos para ${ops.filter(o => o[1].cross.length).length}.`);
+  // A análise não vai mais para o documento de cada cliente: segue para os pacotes de análise (sync/pacotes.js),
+  // lidos pela página só ao abrir o cartão do cliente ou a Visão gerencial.
   if(!dry) await db.doc("hub_sync/analise").set({ dia, em: new Date().toISOString(), per: refTxt, ano: pot.ano, clientes: ops.length, cont, meses: serie ? serie.meses : null });
-  return cont;
+  return { cont, porId: new Map(ops) };
 }
 
 async function gravarMetas(db, cfg, apelidos, { dry, log = console.log, ref = hoje() } = {}){

@@ -12,6 +12,7 @@ const { fetchTable, fetchPedidos, discoverApp, discoverTestes, discoverTestes2, 
 const { mapaDePessoas, mapClientes, syncClientes, syncPessoas, isoLocal, hoje } = require("./hub");
 const R = require("./risco");
 const A = require("./analise");
+const P = require("./pacotes");
 const ORGANOGRAMA = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "config", "organograma.json"), "utf8")).pessoas;
 
 const args = new Set(process.argv.slice(2));
@@ -132,7 +133,10 @@ async function main(){
     if(pipe){ try{ await R.importarPipeline(db, pipe.fpipe, pipe.dados, { dry: DRY, log, mkAtual: mk, clientes }); }catch(e){ log("Cópia da Pipeline de Retenção não concluída: " + e.message); } }
     // 4) Metas do mês por pessoa (toda execução) e análise por cliente: potencial/deficitário e mix (uma vez por dia).
     try{ await A.gravarMetas(db, cfg.qlik, apelidos, { dry: DRY, log }); }catch(e){ log("Metas do Qlik não lidas: " + e.message); }
-    try{ await A.analisarClientes(db, cfg.qlik, clientes, { dry: DRY, log, forcar: args.has("--analisar") }); }catch(e){ log("Análise de clientes não concluída: " + e.message); }
+    let an = null;
+    try{ an = await A.analisarClientes(db, cfg.qlik, clientes, { dry: DRY, log, forcar: args.has("--analisar") }); }catch(e){ log("Análise de clientes não concluída: " + e.message); }
+    // 5) Pacotes da carteira para a página (uma vez por dia, junto com a análise).
+    try{ await P.montarPacotes(db, { dry: DRY, log, analises: an && an.porId, forcar: args.has("--pacotes") }); }catch(e){ log("Pacotes da carteira não montados: " + e.message); }
     if(!DRY) await db.doc("hub_sync/status").set({ ultimaSync: new Date().toISOString(), clientes: clientes.length, novos: cont.novos, atualizados: cont.atualizados, erro: null, mes: isoLocal(hoje()).slice(0, 7) }, { merge: true });
     log("Sincronização concluída.");
   }catch(err){

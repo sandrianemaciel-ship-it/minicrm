@@ -33,3 +33,17 @@ assert.strictEqual(A.codNorm("0001073887"), "1073887");
 assert.deepStrictEqual(A.mesesSerie(new Date(2026, 9, 14)), ["2025-10", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"]);
 assert.deepStrictEqual(A.mesesSerie(new Date(2026, 1, 3)).slice(0, 3), ["2025-02", "2025-08", "2025-09"]);
 console.log("Testes OK: metas (falta ÷ dias úteis, Ortho 10%), potencial x deficitário, mix sugerido e itens sugeridos.");
+
+// Pacotes: agrupa por vendedor, guarda só o resumo da análise no pacote da carteira e respeita o tamanho.
+const P = require("./pacotes");
+const docs = [];
+for(let i = 0; i < 30; i++) docs.push({ id: String(100 + i), data: { cod: String(100 + i), vend: i % 2 ? "ana-souza" : "bia", crm: [{ t: "x".repeat(50000) }], upd: { toMillis: () => 1700000000000 } } });
+const an = new Map([["101", { dia: "2026-10-15", pot: { leg: "Potencial" }, mix: [1, 2], serie: { ped: [1] } }]]);
+const r = P.montar(docs, an);
+const pc = r.docs.filter(d => d[0].startsWith("pc_"));
+assert.ok(pc.every(d => JSON.stringify(d[1]).length < 1024 * 1024), "cada pacote abaixo de 1 MB");
+assert.ok(r.indice["ana-souza"].length >= 2, "carteira grande vira mais de um pacote");
+const c101 = pc.flatMap(d => d[1].itens).find(o => o._id === "101");
+assert.deepStrictEqual(c101.analise, { pot: { leg: "Potencial" }, dia: "2026-10-15" }); assert.strictEqual(c101.upd, 1700000000000);
+assert.deepStrictEqual(r.anIndice, { "ana-souza": ["an_ana-souza_0"] });
+console.log("Testes OK: pacotes da carteira por vendedor e pacotes de análise.");

@@ -11,7 +11,7 @@ function fakeDb(){
   const aplicar = (path, d, o) => { uso.gravacoes++; docs.set(path, o && o.merge ? { ...(docs.get(path) || {}), ...d } : d); };
   return { docs, uso,
     collection: name => ({ get: async () => { const ks = [...docs.keys()].filter(k => k.startsWith(name + "/")); uso.leituras += ks.length; return { size: ks.length, docs: ks.map(snap) }; } }),
-    doc: path => ({ path, set: async (d, o) => aplicar(path, d, o) }),
+    doc: path => ({ path, get: async () => { uso.leituras++; return snap(path); }, set: async (d, o) => aplicar(path, d, o) }),
     getAll: async (...refs) => { uso.leituras += refs.length; return refs.map(r => snap(r.path)); },
     batch: () => { const ops = []; return { set: (ref, d, o) => ops.push(() => aplicar(ref.path, d, o)), delete: ref => ops.push(() => { uso.gravacoes++; docs.delete(ref.path); }), commit: async () => ops.forEach(f => f()) }; }
   };
