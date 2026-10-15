@@ -277,6 +277,94 @@ async function discoverApp(cfg, log = console.log){
   });
 }
 
+// Reconhecimento dos testes (só leitura): metas por representante, potenciais/deficitários
+// e a pasta "Dash" do app Pasta Mestre. Mostra objetos, fórmulas completas e algumas linhas.
+const ALVOS_TESTES = [
+  { appId: null, sheets: ["a7b535a8-1786-4e89-a1e2-da50a3d4145a", "d17cfab3-0f63-49d9-a164-fddee7e76a22"] },
+  { appId: "3ac230ee-8b32-46e1-8314-dad53a6b2bc4", sheets: ["HmQJU", "dash"] }
+];
+async function discoverTestes(cfg, log = console.log){
+  for(const alvo of ALVOS_TESTES){
+    const c2 = Object.assign({}, cfg, { appId: alvo.appId || cfg.appId });
+    try{ await withApp(c2, async (app) => {
+      const props = await app.getAppProperties().catch(() => ({}));
+      log(`\n=== App "${props.qTitle || "?"}" (${c2.appId}) ===`);
+      const listObj = async (def) => (await app.createSessionObject(def)).getLayout();
+      const sheets = (await listObj({ qInfo: { qType: "SheetList" }, qAppObjectListDef: { qType: "sheet",
+        qData: { title: "/qMetaDef/title", cells: "/cells" } } })).qAppObjectList.qItems;
+      log("Pastas: " + sheets.map(sh => `${sh.qData.title} (${sh.qInfo.qId})`).join(" | "));
+      const libMed = {};
+      const resolveLib = async (id) => {
+        if(!id) return "";
+        if(libMed[id] == null){
+          try{ const m = await app.getMeasure(id); const pp = await m.getProperties(); libMed[id] = `${pp.qMeasure.qLabel || ""} := ${pp.qMeasure.qDef}`; }
+          catch(e){ try{ const d = await app.getDimension(id); const pp = await d.getProperties(); libMed[id] = `dim ${(pp.qDim.qFieldDefs || []).join("+")} (${pp.qDim.qFieldLabels || ""})`; }catch(e2){ libMed[id] = "?"; } }
+        }
+        return ` [lib ${id}: ${libMed[id]}]`;
+      };
+      const alvoSheets = sheets.filter(sh => alvo.sheets.some(a => a === sh.qInfo.qId || (a === "dash" && /^dash$/i.test(sh.qData.title || ""))));
+      if(!alvoSheets.length) log("!! Nenhuma das pastas procuradas foi encontrada: " + alvo.sheets.join(", "));
+      const verObj = async (id, nivel) => {
+        const pad = "  ".repeat(nivel);
+        try{
+          const o = await app.getObject(id);
+          const p = await o.getProperties();
+          const tipo = p.qInfo.qType;
+          const t = p.title && (p.title.qStringExpression ? p.title.qStringExpression.qExpr : p.title);
+          const hc = p.qHyperCubeDef || (p.qListObjectDef ? { qDimensions: [p.qListObjectDef] } : null);
+          log(`${pad}- ${tipo} ${id} "${typeof t === "string" ? t : ""}"`);
+          if(hc){
+            for(const d of hc.qDimensions || []) log(`${pad}    dim: ${(d.qDef.qFieldDefs || []).join("+")} label=${JSON.stringify(d.qDef.qFieldLabels || [])}${await resolveLib(d.qLibraryId)}`);
+            for(const m of hc.qMeasures || []) log(`${pad}    med: "${(m.qDef && m.qDef.qLabel) || ""}" = ${(m.qDef && m.qDef.qDef) || ""}${await resolveLib(m.qLibraryId)}`);
+            if(hc.qMeasures && hc.qMeasures.length || tipo === "table"){
+              const lay = await o.getLayout();
+              const sz = lay.qHyperCube && lay.qHyperCube.qSize;
+              if(sz){
+                log(`${pad}    tamanho: ${sz.qcy} linhas x ${sz.qcx} colunas; modo ${lay.qHyperCube.qMode}`);
+                try{
+                  let rows;
+                  if(lay.qHyperCube.qMode === "P"){
+                    const pg = await o.getHyperCubePivotData("/qHyperCubeDef", [{ qTop: 0, qLeft: 0, qWidth: Math.min(sz.qcx, 12), qHeight: 6 }]);
+                    const top = (pg[0].qTop || []).map(x => x.qText).join(" | ");
+                    log(`${pad}    pivot topo: ${top}`);
+                    (pg[0].qLeft || []).slice(0, 6).forEach((l, i) => log(`${pad}    ${l.qText}: ${(pg[0].qData[i] || []).map(c => c.qText).join(" | ")}`));
+                  }else{
+                    rows = await o.getHyperCubeData("/qHyperCubeDef", [{ qTop: 0, qLeft: 0, qWidth: Math.min(sz.qcx, 25), qHeight: 6 }]);
+                    (rows[0].qMatrix || []).forEach(r => log(`${pad}    | ${r.map(c => c.qText).join(" | ")}`));
+                  }
+                }catch(e){ log(`${pad}    (dados: ${e.message})`); }
+              }
+            }
+          }
+          const lay = await o.getLayout();
+          const kids = (lay.qChildList && lay.qChildList.qItems) || [];
+          for(const k of kids) await verObj(k.qInfo.qId, nivel + 1);
+          for(const cid of (p.children || []).map(x => x.refId).filter(Boolean)) await verObj(cid, nivel + 1);
+        }catch(e){ log(`${pad}- ${id}: erro ${e.message}`); }
+      };
+      for(const sh of alvoSheets){
+        log(`\nPasta "${sh.qData.title}" (${sh.qInfo.qId}): ${(sh.qData.cells || []).length} objetos`);
+        for(const c of sh.qData.cells || []) await verObj(c.name, 1);
+      }
+      const fields = (await listObj({ qInfo: { qType: "FieldList" }, qFieldListDef: { qShowSystem: false } })).qFieldList.qItems;
+      const rel = fields.filter(f => /linha|ano|m[eê]s|meta|represent|vend|time|grupo|item|potenc|defic|segment|sub|produto|pre[cç]o|unit|bonif|limite|financ|carteira|qtd|qtde/i.test(f.qName));
+      log(`Campos (${fields.length}; ${rel.length} relacionados): ${rel.map(f => f.qName).join(" | ")}`);
+      for(const nome of ["Linha", "LINHA", "Tipo Representante", "Time", "Ano", "Mês"]){
+        if(!fields.some(f => f.qName === nome)) continue;
+        try{
+          const lo = await app.createSessionObject({ qInfo: { qType: "lv" }, qListObjectDef: { qDef: { qFieldDefs: [nome] }, qInitialDataFetch: [{ qTop: 0, qLeft: 0, qWidth: 1, qHeight: 40 }] } });
+          const l = await lo.getLayout();
+          log(`  valores de ${nome}: ${l.qListObject.qDataPages[0].qMatrix.map(r => r[0].qText).join(" | ")}`);
+        }catch(e){}
+      }
+      const measures = (await listObj({ qInfo: { qType: "MeasureList" }, qMeasureListDef: { qType: "measure",
+        qData: { title: "/qMetaDef/title", expr: "/qMeasure/qDef" } } })).qMeasureList.qItems;
+      log(`Medidas mestras (${measures.length}):`);
+      measures.filter(m => /meta|falta|realiz|pedido|fatur|valor|potenc|defic|pre[cç]o|qtd|qtde/i.test(m.qData.title || "")).forEach(m => log(`  - ${m.qInfo.qId} "${m.qData.title}" = ${m.qData.expr}`));
+    }); }catch(e){ log(`!! App ${c2.appId}: ${e.message}`); }
+  }
+}
+
 function explainSocketError(err, d, url){
   const parts = [`Não foi possível conectar ao Qlik (${url}).`];
   if(d.http) parts.push(`Resposta HTTP ${d.http}.`);
@@ -293,4 +381,4 @@ function explainSocketError(err, d, url){
   return parts.join(" ");
 }
 
-module.exports = { fetchTable, fetchPedidos, isoToSerial, withApp, discoverApp, buildSocketUrl, cellValue, readAllPages, orderedHeaders };
+module.exports = { fetchTable, fetchPedidos, isoToSerial, withApp, discoverApp, discoverTestes, buildSocketUrl, cellValue, readAllPages, orderedHeaders };
