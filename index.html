@@ -194,6 +194,23 @@ td input[type=checkbox], th input[type=checkbox]{accent-color:var(--accent); wid
 .mt-team{margin:0 0 12px;} .mt-team summary{cursor:pointer; font-size:13px;} .mt-team table{margin-top:10px;} .mt-team tfoot th{text-align:left;} .mt-team .r{text-align:right;}
 .an-wrap{display:flex; flex-direction:column; gap:10px; margin:8px 0 14px;} .an-yoy{display:flex; gap:18px; align-items:center; flex-wrap:wrap; background:var(--surface-2); border-radius:10px; padding:10px 12px;} .an-yoy small{display:block; color:var(--ink-faint); font-size:11px;} .an-yoy b{font-variant-numeric:tabular-nums;}
 .an-wrap .ok{color:var(--good);} .an-wrap .neg{color:var(--bad);} .an-fin{display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px;} .an-t{font-weight:600; font-size:13px;} .an-t small{font-weight:400; color:var(--ink-faint);} .an-tab td,.an-tab th{font-size:12px;} .an-tab .r{text-align:right;} .an-cross{margin:0; padding-left:18px; font-size:12.5px; display:flex; flex-direction:column; gap:4px;}
+.ger-filtros{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:flex-end; margin-bottom:12px;} .ger-filtros label{display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; font-weight:600; min-width:170px; flex:1 1 170px;} .ger-filtros select{text-transform:none; letter-spacing:0; font-weight:400;}
+.ger-kpis{grid-template-columns:repeat(4,1fr); margin-bottom:8px;} @media (max-width:860px){ .ger-kpis{grid-template-columns:repeat(2,1fr);} }
+.ger-tile{cursor:default;} .ger-tile:hover{background:var(--surface);} .ger-tile.hl .v{color:var(--accent);}
+.ger-avisos{display:flex; flex-direction:column; gap:2px; font-size:11.5px; color:var(--ink-dim); margin:0 0 14px;}
+.ger-sec{margin-bottom:14px; display:flex; flex-direction:column; gap:12px;} .ger-sec h2{margin:0; font-size:16px;} .ger-sec h2 small{font-weight:400; color:var(--ink-faint); font-size:12px; margin-left:6px;}
+.ger-tab td,.ger-tab th{font-size:12.5px;} .ger-tab .r{text-align:right; font-variant-numeric:tabular-nums;} .ger-tab small{color:var(--ink-faint);}
+.ger-det summary{cursor:pointer; font-size:13px; font-weight:600; margin-bottom:6px;}
+.ger-form{display:flex; flex-wrap:wrap; gap:12px 18px; align-items:flex-start;} .ger-form label{display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; flex:1 1 220px; max-width:340px;} .ger-form .note{font-size:11px; color:var(--ink-faint); font-weight:400;}
+.ger-in{width:100%; max-width:180px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; font-variant-numeric:tabular-nums;} .ger-tab .ger-in{max-width:90px; padding:3px 6px; text-align:right;}
+.ger-res{display:flex; flex-wrap:wrap; gap:10px 24px; background:var(--surface-2); border-radius:10px; padding:10px 12px;} .ger-res small{display:block; font-size:11px; color:var(--ink-faint);} .ger-res b{font-variant-numeric:tabular-nums;}
+.ger-sec .ok{color:var(--good);} .ger-sec .neg{color:var(--bad);}
+.ger-verd{padding:10px 12px; border-radius:10px; font-size:13px;} .ger-verd.ok{background:var(--good-soft); color:var(--good);} .ger-verd.neg{background:var(--warn-soft); color:var(--warn);}
+.ger-alertas{margin:0; padding-left:18px; font-size:12.5px; color:var(--warn); display:flex; flex-direction:column; gap:4px;}
+.ger-cen{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;} @media (max-width:900px){ .ger-cen{grid-template-columns:1fr;} }
+.ger-cen-c{background:var(--surface-2); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px;} .ger-cen-c h3{margin:0; font-size:14px;} .ger-cen-c label{display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px;} .ger-cen-c .ger-in{max-width:100px; text-align:right;}
+.ger-cen-v small{display:block; font-size:11px; color:var(--ink-faint);} .ger-cen-v b{font-size:20px; font-variant-numeric:tabular-nums;} .ger-cen-v span{font-size:11.5px; color:var(--ink-dim);}
+.ger-cen-c ul{margin:0; padding-left:16px; font-size:12px; color:var(--ink-dim);} .ger-cen-d{font-size:12.5px; font-weight:600;}
 .selall-top{display:flex; align-items:center; gap:12px; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin:0 0 10px; font-size:13px;}
 .selall-top label{display:flex; align-items:center; gap:8px; cursor:pointer;}
 .selall-top span{color:var(--ink-dim);}
@@ -966,17 +983,18 @@ const ICONS = {
   carteira:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12.5h18"/>',
   agenda:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
   equipe:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>',
+  gerencial:'<path d="M3 20h18"/><path d="M6 16v-5M11 16V8M16 16v-3M21 4l-5 5-4-3-6 6"/>',
   money:'<path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v7H2v-7z"/>'
 };
 const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]||""}</svg>`;
-const VIEW_LABEL = {carteira:"Carteira de clientes",painel:"Dashboard",agenda:"Gestão de contatos",ativos:"Clientes ativos",risco:"Inativam no mês",inativos:"Clientes inativos",prospeccao:"Pipeline de prospecção",distribuicao:"Distribuição de leads",equipe:"Equipe e conversão"};
+const VIEW_LABEL = {carteira:"Carteira de clientes",painel:"Dashboard",agenda:"Gestão de contatos",ativos:"Clientes ativos",risco:"Inativam no mês",inativos:"Clientes inativos",prospeccao:"Pipeline de prospecção",distribuicao:"Distribuição de leads",equipe:"Equipe e conversão",gerencial:"Visão gerencial"};
 function allowedViews(){
   const r = viewerRole();
   if(r==="sdr") return ["painel","agenda","prospeccao","equipe"];
-  if(r==="vendedor") return ["painel","agenda","carteira","prospeccao","equipe"];
-  return ["painel","agenda","carteira","prospeccao","distribuicao","equipe"];
+  if(r==="vendedor") return ["painel","agenda","carteira","prospeccao","equipe"].concat(podeGerencial()?["gerencial"]:[]);
+  return ["painel","agenda","carteira","prospeccao","distribuicao","equipe","gerencial"];
 }
 // "Carteira de clientes" reúne as três pipelines do vendedor numa pasta só, com uma aba para cada uma.
 const CARTEIRA_TABS = ["risco","ativos","inativos"];
@@ -1015,6 +1033,7 @@ function renderNav(){
   h += item("distribuicao", semDono? `<span class="cnt alert">${semDono}</span>`:"");
   h += `<div class="nav-group">Gestão</div>`;
   h += item("equipe");
+  h += item("gerencial");
   $("#nav").innerHTML = h;
   $("#crumb").textContent = isCarteira(S.view) ? "Carteira de clientes" : VIEW_LABEL[S.view];
   $("#monthLbl").textContent = MONTH_LABEL;
@@ -1035,6 +1054,7 @@ function render(){
   }
   if(S.view==="painel") h += renderPainel();
   else if(S.view==="equipe") h += renderEquipe();
+  else if(S.view==="gerencial") h += renderGerencial();
   else if(S.view==="agenda") h += renderAgenda();
   else if(S.view==="distribuicao") h += renderDistribuicao();
   else h += renderPipe(S.view);
@@ -1117,6 +1137,285 @@ function analiseHtml(it){
   return h + `</div>`;
 }
 function money2(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+
+/* ======================= VISÃO GERENCIAL (líderes, supervisores e gerentes) =======================
+   Só leitura: nada aqui grava no banco. Os parâmetros dos simuladores ficam apenas na memória da página.
+   Base: série mensal por cliente lida do Qlik pelo robô (analise.serie):
+     [0] mesmo mês do ano passado · [1..6] os 6 meses fechados anteriores · [7] mês atual (parcial).
+   Faturamento = NF de venda - devolução · Pedidos = Valor Total de Pedidos (- Canc) · Nº pedidos = pedidos distintos. */
+const GER0 = { time:"", vend:"", ref:"3m", met:"ped", meta:null, g:10, gVend:{}, gCli:{}, cap:15, dist:"prop", tNovo:null, tReat:null, mixN:50,
+  cen:{ cons:{g:3, n:null, r:null}, real:{g:8, n:null, r:null}, agre:{g:15, n:null, r:null} } };
+function gerS(){ if(!S.ger) S.ger = JSON.parse(JSON.stringify(GER0)); return S.ger; }
+const GER_REF = { "3m":{l:"Média dos 3 últimos meses fechados", idx:[4,5,6]}, "6m":{l:"Média dos 6 últimos meses fechados", idx:[1,2,3,4,5,6]}, "ly":{l:"Mesmo mês do ano passado", idx:[0]} };
+const GER_MET = { ped:"Pedidos (R$)", fat:"Faturamento (R$)" };
+function podeGerencial(){ if(S.viewer==="gestor") return true; const p = person(S.viewer); return !!p && p.acesso==="equipe"; }
+function mkCurto(mk){ if(!mk) return "—"; const [y,m] = mk.split("-").map(Number); return MONTHS[m-1].slice(0,3)+"/"+String(y).slice(2); }
+const nInt = v => Math.round(v||0).toLocaleString("pt-BR");
+const pctTxt = (v, d=0) => v==null || !isFinite(v) ? "—" : (v*100).toLocaleString("pt-BR",{maximumFractionDigits:d, minimumFractionDigits:d})+"%";
+
+// Clientes da carteira selecionada (respeita o acesso de quem está vendo).
+function gerClientes(){
+  const G = gerS();
+  return DB.clients.filter(c=>{
+    if(!c.vend || !podeVer(c.vend)) return false;
+    const p = person(c.vend); if(!p) return false;
+    if(G.time && p.time!==G.time) return false;
+    if(G.vend && c.vend!==G.vend) return false;
+    return true;
+  });
+}
+// Números de um cliente na métrica e no período de referência escolhidos.
+function gerNum(c, G){
+  const s = c.analise && c.analise.serie; const ref = GER_REF[G.ref];
+  if(!s || !s.meses || !(s[G.met]||[]).length) return { ok:false, ref:0, np:0, comp:0, real:0, npReal:0, pico:0, meses:[] };
+  const arr = s[G.met], np = s.np || [];
+  const ref0 = ref.idx.reduce((a,i)=>a+(arr[i]||0),0)/ref.idx.length;
+  const npRef = ref.idx.reduce((a,i)=>a+(np[i]||0),0)/ref.idx.length;
+  const comp = ref.idx.filter(i=>(arr[i]||0)>0).length/ref.idx.length; // fração dos meses com compra
+  // Realizado no mês: pedidos de hora em hora (pedMes); faturamento pela série diária.
+  const real = G.met==="ped" && c.pedMes!=null ? c.pedMes : (arr[7]||0);
+  const pico = Math.max(0, ...arr.slice(0,7).map(v=>v||0));
+  return { ok:true, ref:Math.max(0,ref0), np:npRef, comp, real, npReal:np[7]||0, pico, meses:s.meses };
+}
+const noMes = (iso, mk) => !!iso && iso.slice(0,7)===mk;
+
+// Agregados de um conjunto de clientes.
+function gerAgg(lista, G){
+  const a = { cli:lista.length, ativos:0, risco:0, inativos:0, reat:0, novos:0, ref:0, np:0, compr:0, real:0, npReal:0, headroom:0, semSerie:0, vends:new Set(), retomada:0 };
+  for(const c of lista){
+    a.vends.add(c.vend);
+    if(c.pipe==="ativo") a.ativos++; else if(c.pipe==="risco") a.risco++; else a.inativos++;
+    const s = c.analise && c.analise.serie;
+    if(s && noMes(s.dtReat, CUR_MK)) a.reat++;
+    if(s && noMes(s.dtPri, CUR_MK)) a.novos++;
+    const n = gerNum(c, G); if(!n.ok){ a.semSerie++; continue; }
+    a.ref += n.ref; a.np += n.np; a.compr += n.comp; a.real += n.real; a.npReal += n.npReal;
+    a.headroom += Math.max(0, n.pico - n.ref);
+    const p = c.analise.pot; if(p && G.met==="ped" && p.v25>p.v26){ const fim = String(p.per||"").split("-")[1]; const meses = (fim && MONTHS.findIndex(m=>m.startsWith(fim))+1) || 9; a.retomada += (p.v25-p.v26)/meses; }
+  }
+  a.ticketCli = a.compr ? a.ref/a.compr : 0;  // por cliente comprador no mês
+  a.ticketPed = a.np ? a.ref/a.np : 0;         // por pedido
+  return a;
+}
+function metaQlikDe(vendIds){ const M = metasMes(); if(!M) return null; let t = 0, ok = false; vendIds.forEach(id=>{ const m = M.porPessoa && M.porPessoa[id]; if(m && m.meta>0){ t += m.meta; ok = true; } }); return ok ? t : null; }
+
+// Ticket de referência para novos clientes e reativações, a partir do histórico real.
+function gerTickets(lista, G){
+  const novos = [], reat = [], inat = [];
+  for(const c of lista){
+    const s = c.analise && c.analise.serie; if(!s || !s.meses) continue;
+    const arr = s[G.met] || [];
+    // média mensal do cliente do mês da entrada (ou reativação) até o último mês fechado
+    const media = desde => { const i0 = s.meses.findIndex((mk,i)=>i>=1 && mk>=desde); if(i0<1) return null; const v = arr.slice(i0,7); return v.length ? v.reduce((a,b)=>a+(b||0),0)/v.length : null; };
+    if(s.dtPri && s.dtPri.slice(0,7)>=s.meses[1] && s.dtPri.slice(0,7)<CUR_MK){ const m = media(s.dtPri.slice(0,7)); if(m>0) novos.push(m); }
+    if(s.dtReat && s.dtReat.slice(0,7)>=s.meses[1] && s.dtReat.slice(0,7)<CUR_MK){ const m = media(s.dtReat.slice(0,7)); if(m>0) reat.push(m); }
+    if(c.pipe==="inativo" && c.analise.pot && c.analise.pot.v25>0 && G.met==="ped") inat.push(c.analise.pot.v25/9);
+  }
+  const med = a => { if(!a.length) return null; const s = a.slice().sort((x,y)=>x-y); const k = Math.floor(s.length/2); return s.length%2 ? s[k] : (s[k-1]+s[k])/2; };
+  const tn = med(novos), tr = med(reat) || med(inat);
+  return { tNovo:tn, fonteN: tn ? `mediana de ${novos.length} clientes novos dos últimos 6 meses` : null,
+    tReat:tr, fonteR: med(reat) ? `mediana de ${reat.length} clientes reativados dos últimos 6 meses` : (med(inat) ? `média mensal de 2025 de ${inat.length} clientes hoje inativos` : null), poolInat: lista.filter(c=>c.pipe==="inativo").length };
+}
+
+function gerInput(k, v, extra=""){ return `<input class="ger-in" type="number" data-ger="${k}" value="${v==null?"":Math.round(v*100)/100}" ${extra}>`; }
+function gerTile(k, v, s, cls=""){ return `<div class="kpi2 ger-tile ${cls}"><span class="k">${k}</span><span class="v num">${v}</span><span class="s">${s||""}</span></div>`; }
+
+function renderGerencial(){
+  if(!podeGerencial()) return `<div class="view-head"><div><h1>Visão gerencial</h1><p>Disponível para líderes, supervisores e gerentes.</p></div></div>`;
+  const G = gerS();
+  const lista = gerClientes();
+  const A = gerAgg(lista, G);
+  const tk = gerTickets(lista, G);
+  const meses = (lista.find(c=>c.analise&&c.analise.serie&&c.analise.serie.meses)||{analise:{serie:{meses:[]}}}).analise.serie.meses;
+  const refMeses = GER_REF[G.ref].idx.map(i=>meses[i]).filter(Boolean);
+  const refLbl = refMeses.length ? (refMeses.length===1 ? mkCurto(refMeses[0]) : `${mkCurto(refMeses[0])} a ${mkCurto(refMeses[refMeses.length-1])}`) : "sem dados";
+  const atual = (lista.find(c=>c.analise&&c.analise.dia)||{analise:{}}).analise.dia;
+  const vendIds = Array.from(A.vends);
+  const metaQ = metaQlikDe(vendIds);
+  const meta = G.meta!=null ? G.meta : (metaQ||0);
+  const L = GER_MET[G.met].replace(" (R$)","").toLowerCase();
+
+  // Opções de filtro: times e vendedores visíveis.
+  const pessoas = DB.people.filter(p=>p.papel!=="gestor" && p.papel!=="sdr" && podeVer(p.id) && DB.clients.some(c=>c.vend===p.id));
+  const times = Array.from(new Set(pessoas.map(p=>p.time).filter(Boolean))).sort();
+  const vends = pessoas.filter(p=>!G.time || p.time===G.time).sort((a,b)=>a.nome.localeCompare(b.nome));
+
+  let h = `<div class="view-head"><div><h1>Visão gerencial da carteira</h1><p>Simulações de crescimento, meta e cenários. <b>Nada aqui altera a carteira</b>: os valores digitados ficam só nesta tela.</p></div></div>`;
+  h += `<div class="ger-filtros panel">
+    <label><span>Líder / time</span><select data-ger="time">${opt("","Todos os times",!G.time)}${times.map(t=>opt(t,t,t===G.time)).join("")}</select></label>
+    <label><span>Vendedor</span><select data-ger="vend">${opt("","Todos os vendedores",!G.vend)}${vends.map(p=>opt(p.id,p.nome,p.id===G.vend)).join("")}</select></label>
+    <label><span>Período de referência</span><select data-ger="ref">${Object.entries(GER_REF).map(([k,r])=>opt(k,r.l,k===G.ref)).join("")}</select></label>
+    <label><span>Medida</span><select data-ger="met">${Object.entries(GER_MET).map(([k,l])=>opt(k,l,k===G.met)).join("")}</select></label>
+    <button class="btn small" type="button" data-act="gerReset">Restaurar valores</button>
+  </div>`;
+  const semDados = !A.cli || A.semSerie===A.cli;
+  if(semDados){
+    h += `<div class="notice"><div><b>Ainda não há histórico mensal para esta carteira.</b> A série de faturamento e pedidos por cliente é gravada pelo robô do Qlik uma vez por dia (Actions › Sincronizar Qlik › "analisar"). Sem ela, os simuladores não calculam nada para não presumir valores.</div></div>`;
+    return h;
+  }
+  const avisos = [];
+  if(A.semSerie) avisos.push(`${A.semSerie} de ${A.cli} clientes sem histórico no Qlik ficaram fora das médias.`);
+  if(G.met==="fat") avisos.push("A meta do Qlik é de pedidos; em faturamento ela é usada como referência. Ajuste o campo da meta se precisar.");
+  avisos.push(`Histórico: ${refLbl} (${GER_REF[G.ref].l.toLowerCase()}). Realizado: ${mkLabel(CUR_MK)} até hoje${G.met==="ped"?" (pedidos de hora em hora)":` (faturamento do Qlik em ${fd(atual)})`}. Projetado: só simulação.`);
+
+  // ---------- Simulador de crescimento ----------
+  const gDe = c => G.gCli[c.cod]!=null ? G.gCli[c.cod] : (G.gVend[c.vend]!=null ? G.gVend[c.vend] : G.g);
+  let projG = 0; lista.forEach(c=>{ const n = gerNum(c,G); if(n.ok) projG += n.ref*(1+gDe(c)/100); });
+  // ---------- Simulador de meta ----------
+  const falta = Math.max(0, meta - A.real);
+  const cresc = A.ref ? meta/A.ref - 1 : null;
+  const capCarteira = A.ref*(1+G.cap/100);
+  const cobre = meta <= capCarteira;
+  const gapExtra = Math.max(0, meta - capCarteira);
+  const tNovo = G.tNovo!=null ? G.tNovo : (tk.tNovo||A.ticketCli||0);
+  const tReat = G.tReat!=null ? G.tReat : (tk.tReat||A.ticketCli||0);
+  const nNovos = tNovo ? Math.ceil(gapExtra*G.mixN/100/tNovo) : 0;
+  const nReat = tReat ? Math.ceil(gapExtra*(100-G.mixN)/100/tReat) : 0;
+
+  // ---------- Destaques ----------
+  h += `<div class="kpi2-grid ger-kpis">
+    ${gerTile("Meta mensal", money(meta), G.meta!=null?"digitada (simulação)":(metaQ?"soma das metas do Qlik":"sem meta no Qlik — digite abaixo"))}
+    ${gerTile(`Realizado em ${MONTHS[TODAY.getMonth()].slice(0,3)}`, money(A.real), `${pctTxt(meta?A.real/meta:null)} da meta · ${nInt(A.npReal)} pedidos`)}
+    ${gerTile("Falta para a meta", money(falta), falta?`${money(falta/Math.max(1,diasUteisRest(TODAY)))}/dia útil`:"meta atingida","hl")}
+    ${gerTile("Crescimento necessário", pctTxt(cresc!=null?Math.max(0,cresc):null,1), cresc!=null&&cresc<0?`a média de ${refLbl} (${money(A.ref)}) já supera a meta`:`sobre a média de ${refLbl} (${money(A.ref)})`)}
+    ${gerTile("Projeção simulada", money(projG), `crescimento de ${G.g}% na carteira`)}
+    ${gerTile("Ticket médio usado", money(tNovo), `novos · reativação ${money(tReat)}`)}
+    ${gerTile("Novos clientes estimados", nInt(nNovos), cobre?"não precisa: a carteira cobre":`para ${G.mixN}% do que falta`)}
+    ${gerTile("Reativações estimadas", nInt(nReat), cobre?"não precisa: a carteira cobre":`de ${nInt(tk.poolInat)} inativos na carteira`)}
+  </div>`;
+  h += `<div class="ger-avisos">${avisos.map(a=>`<span>${a}</span>`).join("")}</div>`;
+
+  // ---------- 1. Visão da carteira ----------
+  const grupos = (chave) => { const m = new Map(); lista.forEach(c=>{ const p = person(c.vend); const k = chave(c,p); if(!m.has(k)) m.set(k, []); m.get(k).push(c); }); return m; };
+  const porTime = grupos((c,p)=>p.time||"Sem time");
+  const porVend = grupos(c=>c.vend);
+  const liderDe = t => { const l = DB.people.find(p=>p.time===t && (p.papel==="lider" || p.acesso==="equipe")); return l ? l.nome : ""; };
+  h += `<section class="panel ger-sec"><h2>1. Carteira <small>${GER_MET[G.met]} · média mensal de ${refLbl}</small></h2>
+    <div class="kpi2-grid">
+      ${gerTile("Clientes", nInt(A.cli), `${nInt(A.ativos)} ativos · ${nInt(A.risco)} inativam no mês · ${nInt(A.inativos)} inativos`)}
+      ${gerTile("Reativados no mês", nInt(A.reat), `${nInt(A.novos)} clientes novos (1º faturamento) no mês`)}
+      ${gerTile(`Média mensal de ${L}`, money(A.ref), `${nInt(A.np)} pedidos/mês`)}
+      ${gerTile("Média por vendedor", money(A.vends.size?A.ref/A.vends.size:0), `${A.vends.size} vendedores`)}
+      ${gerTile("Ticket médio", money(A.ticketCli), `por cliente comprador · ${money(A.ticketPed)} por pedido`)}
+      ${gerTile("Potencial de crescimento", money(A.headroom), `voltar ao melhor mês de cada cliente${A.retomada?` · retomar 2025: ${money(A.retomada)}/mês`:""}`)}
+    </div>
+    <div class="table-wrap"><table class="ger-tab"><thead><tr><th>Líder / time</th><th class="r">Vendedores</th><th class="r">Clientes</th><th class="r">Ativos</th><th class="r">Inativos</th><th class="r">Reativados</th><th class="r">Média mensal</th><th class="r">Média/vendedor</th><th class="r">Pedidos/mês</th><th class="r">Ticket/cliente</th><th class="r">Realizado mês</th><th class="r">Potencial</th></tr></thead><tbody>
+    ${Array.from(porTime).sort((a,b)=>gerAgg(b[1],G).ref-gerAgg(a[1],G).ref).map(([t,cs])=>{ const a = gerAgg(cs,G); return `<tr><td><b>${esc(t)}</b>${liderDe(t)?`<br><small>${esc(liderDe(t))}</small>`:""}</td><td class="r">${a.vends.size}</td><td class="r">${nInt(a.cli)}</td><td class="r">${nInt(a.ativos)}</td><td class="r">${nInt(a.inativos)}</td><td class="r">${nInt(a.reat)}</td><td class="r"><b>${money(a.ref)}</b></td><td class="r">${money(a.vends.size?a.ref/a.vends.size:0)}</td><td class="r">${nInt(a.np)}</td><td class="r">${money(a.ticketCli)}</td><td class="r">${money(a.real)}</td><td class="r">${money(a.headroom)}</td></tr>`; }).join("")}
+    </tbody></table></div>
+    <details class="ger-det"><summary>Por vendedor</summary><div class="table-wrap"><table class="ger-tab"><thead><tr><th>Vendedor</th><th>Time</th><th class="r">Clientes</th><th class="r">Ativos</th><th class="r">Inativos</th><th class="r">Média mensal</th><th class="r">Pedidos/mês</th><th class="r">Ticket/cliente</th><th class="r">Realizado mês</th><th class="r">Potencial</th></tr></thead><tbody>
+    ${Array.from(porVend).map(([v,cs])=>[v,cs,gerAgg(cs,G)]).sort((a,b)=>b[2].ref-a[2].ref).map(([v,cs,a])=>`<tr><td><b>${esc(nameOf(v))}</b></td><td>${esc((person(v)||{}).time||"")}</td><td class="r">${nInt(a.cli)}</td><td class="r">${nInt(a.ativos)}</td><td class="r">${nInt(a.inativos)}</td><td class="r"><b>${money(a.ref)}</b></td><td class="r">${nInt(a.np)}</td><td class="r">${money(a.ticketCli)}</td><td class="r">${money(a.real)}</td><td class="r">${money(a.headroom)}</td></tr>`).join("")}
+    </tbody></table></div></details>
+  </section>`;
+
+  // ---------- 2. Simulador de crescimento ----------
+  const clientesOrd = lista.map(c=>({c, n:gerNum(c,G)})).filter(x=>x.n.ok && x.n.ref>0).sort((a,b)=>b.n.ref-a.n.ref);
+  h += `<section class="panel ger-sec"><h2>2. Simulador de crescimento</h2>
+    <div class="ger-form"><label><span>Crescimento desejado da carteira (%)</span>${gerInput("g", G.g, 'step="0.5"')}</label>
+      <div class="ger-res"><div><small>Base (${refLbl})</small><b>${money(A.ref)}</b></div><div><small>Projetado</small><b>${money(projG)}</b></div><div><small>Valor adicional</small><b class="ok">+${money(projG-A.ref)}</b></div><div><small>Ticket por cliente comprador</small><b>${money(A.ticketCli)} → ${money(A.compr?projG/A.compr:0)}</b></div></div></div>
+    <div class="table-wrap"><table class="ger-tab"><thead><tr><th>Vendedor</th><th>Time</th><th class="r">Base</th><th class="r">% simulado</th><th class="r">Projetado</th><th class="r">Adicional</th><th class="r">Meta Qlik</th><th class="r">Projetado/meta</th></tr></thead><tbody>
+    ${Array.from(porVend).map(([v,cs])=>{ let b=0,p=0; cs.forEach(c=>{ const n=gerNum(c,G); if(n.ok){ b+=n.ref; p+=n.ref*(1+gDe(c)/100); } }); const mq = metaQlikDe([v]); return {v,b,p,mq}; }).sort((a,b)=>b.b-a.b).map(r=>`<tr><td><b>${esc(nameOf(r.v))}</b></td><td>${esc((person(r.v)||{}).time||"")}</td><td class="r">${money(r.b)}</td><td class="r">${gerInput("gVend:"+r.v, G.gVend[r.v]!=null?G.gVend[r.v]:"", `placeholder="${G.g}" step="0.5"`)}</td><td class="r"><b>${money(r.p)}</b></td><td class="r">+${money(r.p-r.b)}</td><td class="r">${r.mq?money(r.mq):"—"}</td><td class="r">${r.mq?pctTxt(r.p/r.mq):"—"}</td></tr>`).join("")}
+    </tbody></table></div>
+    <details class="ger-det"><summary>Por cliente (os 30 maiores da carteira)</summary><div class="table-wrap"><table class="ger-tab"><thead><tr><th>Cliente</th><th>Vendedor</th><th class="r">Base</th><th class="r">% simulado</th><th class="r">Novo valor estimado</th></tr></thead><tbody>
+    ${clientesOrd.slice(0,30).map(({c,n})=>`<tr><td><b>${esc(c.cli)}</b><br><small>Cód ${esc(c.cod)}</small></td><td>${esc(nameOf(c.vend))}</td><td class="r">${money(n.ref)}</td><td class="r">${gerInput("gCli:"+c.cod, G.gCli[c.cod]!=null?G.gCli[c.cod]:"", `placeholder="${G.gVend[c.vend]!=null?G.gVend[c.vend]:G.g}" step="0.5"`)}</td><td class="r"><b>${money(n.ref*(1+gDe(c)/100))}</b></td></tr>`).join("")}
+    </tbody></table></div></details>
+  </section>`;
+
+  // ---------- 3. Simulador de meta ----------
+  const inc = Math.max(0, meta - A.ref);
+  // Distribuição do crescimento: proporcional à base (mesmo % para todos) ou ao potencial (quem já comprou mais e caiu).
+  const linhas = clientesOrd.map(({c,n})=>{
+    const head = Math.max(0, n.pico - n.ref);
+    return { c, n, head };
+  });
+  const somaHead = linhas.reduce((a,l)=>a+l.head,0);
+  linhas.forEach(l=>{ l.add = G.dist==="pot" && somaHead ? inc*l.head/somaHead : (A.ref ? inc*l.n.ref/A.ref : 0); l.gp = l.n.ref ? l.add/l.n.ref : null; l.part = inc ? l.add/inc : 0; });
+  linhas.sort((a,b)=>b.add-a.add);
+  const top10 = linhas.slice(0, Math.max(1, Math.ceil(linhas.length*0.1))).reduce((a,l)=>a+l.part,0);
+  const top5n = linhas.slice(0,5).reduce((a,l)=>a+l.part,0);
+  const alertas = [];
+  if(cresc!=null && cresc*100 > G.cap) alertas.push(`O crescimento necessário (${pctTxt(cresc,1)}) passa do limite viável de ${G.cap}% para a carteira atual: complemente com novos clientes e reativações (seção 4).`);
+  if(inc && top5n>0.35) alertas.push(`Concentração: só 5 clientes respondem por ${pctTxt(top5n)} do crescimento necessário. Diversifique as ações para não depender de poucos clientes.`);
+  if(G.dist==="pot" && somaHead && inc>somaHead) alertas.push(`O potencial de recuperação da carteira (${money(somaHead)}) não cobre o crescimento necessário (${money(inc)}).`);
+  h += `<section class="panel ger-sec"><h2>3. Simulador de meta mensal</h2>
+    <div class="ger-form">
+      <label><span>Meta do mês (${G.met==="ped"?"pedidos":"faturamento"}, R$)</span>${gerInput("meta", meta, 'step="1000"')}<span class="note">${metaQ?`Meta do Qlik para esta seleção: ${money(metaQ)}`:"Sem meta do Qlik para esta seleção."}</span></label>
+      <label><span>Crescimento máximo viável da carteira atual (%)</span>${gerInput("cap", G.cap, 'step="1"')}</label>
+      <label><span>Distribuir o crescimento</span><select data-ger="dist">${opt("prop","Igual para todos (proporcional à base)",G.dist==="prop")}${opt("pot","Pelo potencial (quem já comprou mais)",G.dist==="pot")}</select></label>
+    </div>
+    <div class="ger-res">
+      <div><small>Realizado no mês</small><b>${money(A.real)}</b></div>
+      <div><small>Falta para a meta</small><b>${money(falta)}</b></div>
+      <div><small>Base de referência</small><b>${money(A.ref)}</b></div>
+      <div><small>Crescimento necessário</small><b class="${cresc!=null&&cresc*100>G.cap?"neg":"ok"}">${pctTxt(cresc!=null?Math.max(0,cresc):null,1)}</b></div>
+    </div>
+    <div class="ger-verd ${cobre?"ok":"neg"}">${cobre
+      ? `<b>A carteira atual cobre a meta</b> com ${pctTxt(Math.max(0,cresc),1)} de crescimento sobre a média de ${refLbl}.`
+      : `<b>Só a carteira atual não cobre a meta.</b> Com o limite de ${G.cap}%, ela chega a ${money(capCarteira)}; faltam ${money(gapExtra)} vindos de clientes novos e reativações.`}</div>
+    ${alertas.length?`<ul class="ger-alertas">${alertas.map(a=>`<li>⚠ ${a}</li>`).join("")}</ul>`:""}
+    <details class="ger-det"${inc?" open":""}><summary>Crescimento necessário por cliente (os 25 que mais contribuem)</summary><div class="table-wrap"><table class="ger-tab"><thead><tr><th>Cliente</th><th>Vendedor</th><th class="r">Base</th><th class="r">Crescimento</th><th class="r">Novo valor estimado</th><th class="r">Participação</th></tr></thead><tbody>
+    ${linhas.slice(0,25).map(l=>`<tr><td><b>${esc(l.c.cli)}</b><br><small>Cód ${esc(l.c.cod)}</small></td><td>${esc(nameOf(l.c.vend))}</td><td class="r">${money(l.n.ref)}</td><td class="r">${pctTxt(l.gp,1)}</td><td class="r"><b>${money(l.n.ref+l.add)}</b></td><td class="r">${pctTxt(l.part,1)}</td></tr>`).join("") || `<tr><td colspan="6" class="hint">A base já cobre a meta.</td></tr>`}
+    </tbody></table></div></details>
+  </section>`;
+
+  // ---------- 4. Novos clientes e reativações ----------
+  const estr = (nome, carteiraG, partN, partR) => {
+    const vC = A.ref*(carteiraG/100); const rest = Math.max(0, meta - A.ref - vC);
+    const nN = tNovo && partN ? Math.ceil(rest*partN/tNovo) : 0, nR = tReat && partR ? Math.ceil(rest*partR/tReat) : 0;
+    const total = A.ref + vC + nN*tNovo + nR*tReat;
+    return { nome, carteiraG, nN, nR, add: total - A.ref, pct: meta ? total/meta : null, total };
+  };
+  const combos = [
+    estr(`Só carteira atual (${G.cap}%)`, G.cap, 0, 0),
+    estr("Carteira + só clientes novos", G.cap, 1, 0),
+    estr("Carteira + só reativações", G.cap, 0, 1),
+    estr(`Carteira + ${G.mixN}% novos / ${100-G.mixN}% reativações`, G.cap, G.mixN/100, 1-G.mixN/100),
+    estr("Sem crescer a carteira: novos e reativações", 0, G.mixN/100, 1-G.mixN/100)
+  ];
+  h += `<section class="panel ger-sec"><h2>4. Novos clientes e reativações</h2>
+    <div class="ger-form">
+      <label><span>Ticket mensal de cliente novo (R$)</span>${gerInput("tNovo", tNovo, 'step="100"')}<span class="note">${tk.tNovo?`Sugerido: ${money(tk.tNovo)} (${tk.fonteN}).`:`Sem histórico de clientes novos nesta carteira: usando o ticket médio da carteira (${money(A.ticketCli)}) até você informar o valor.`}</span></label>
+      <label><span>Ticket mensal de cliente reativado (R$)</span>${gerInput("tReat", tReat, 'step="100"')}<span class="note">${tk.tReat?`Sugerido: ${money(tk.tReat)} (${tk.fonteR}).`:`Sem histórico de reativações nesta carteira: usando o ticket médio da carteira (${money(A.ticketCli)}) até você informar o valor.`}</span></label>
+      <label><span>Parte do que falta via clientes novos (%)</span>${gerInput("mixN", G.mixN, 'step="5" min="0" max="100"')}<span class="note">O restante vem de reativações.</span></label>
+    </div>
+    ${cobre?`<p class="hint">Com o limite de ${G.cap}%, a carteira atual já cobre a meta. As combinações abaixo mostram o que cada estratégia acrescentaria.</p>`:`<p class="hint">Faltam <b>${money(gapExtra)}</b> além do crescimento viável da carteira: <b>${nInt(nNovos)}</b> clientes novos e <b>${nInt(nReat)}</b> reativações na divisão escolhida${nReat>tk.poolInat?` — mais reativações do que os ${nInt(tk.poolInat)} inativos da carteira`:""}.</p>`}
+    <div class="table-wrap"><table class="ger-tab"><thead><tr><th>Estratégia</th><th class="r">Crescimento carteira</th><th class="r">Clientes novos</th><th class="r">Reativações</th><th class="r">Adicional esperado</th><th class="r">Projetado</th><th>% da meta</th></tr></thead><tbody>
+    ${combos.map(x=>`<tr><td><b>${x.nome}</b></td><td class="r">${x.carteiraG}%</td><td class="r">${nInt(x.nN)}</td><td class="r">${nInt(x.nR)}${x.nR>tk.poolInat?` <span class="chip warn">acima dos inativos</span>`:""}</td><td class="r">+${money(x.add)}</td><td class="r"><b>${money(x.total)}</b></td><td style="min-width:120px">${barraMeta(x.pct)}<small>${pctTxt(x.pct)}</small></td></tr>`).join("")}
+    </tbody></table></div>
+  </section>`;
+
+  // ---------- 5. Cenários comparativos ----------
+  const def = { cons:[0.01,0.02], real:[0.02,0.04], agre:[0.04,0.08] };
+  const CEN = [["cons","Conservador"],["real","Realista"],["agre","Agressivo"]].map(([k,nome])=>{
+    const c = G.cen[k]; const n = c.n!=null ? c.n : Math.ceil(A.ativos*def[k][0]); const r = c.r!=null ? c.r : Math.ceil(tk.poolInat*def[k][1]);
+    const vCart = A.ref*c.g/100, vN = n*tNovo, vR = r*tReat; const total = A.ref + vCart + vN + vR; const dif = total - meta;
+    const faltaN = dif<0 && tNovo ? Math.ceil(-dif/tNovo) : 0, faltaR = dif<0 && tReat ? Math.ceil(-dif/tReat) : 0;
+    return { k, nome, g:c.g, n, r, vCart, vN, vR, total, dif, pct: meta? total/meta : null, faltaN, faltaR };
+  });
+  h += `<section class="panel ger-sec"><h2>5. Cenários comparativos <small>edite os números de cada cenário</small></h2>
+    <div class="ger-cen">${CEN.map(c=>`<div class="ger-cen-c ${c.k}"><h3>${c.nome}</h3>
+      <label><span>Crescimento da carteira (%)</span>${gerInput(`cen:${c.k}:g`, c.g, 'step="0.5"')}</label>
+      <label><span>Clientes novos</span>${gerInput(`cen:${c.k}:n`, c.n, 'step="1" min="0"')}</label>
+      <label><span>Reativações</span>${gerInput(`cen:${c.k}:r`, c.r, 'step="1" min="0"')}</label>
+      <div class="ger-cen-v"><small>Projetado</small><b>${money(c.total)}</b>${barraMeta(c.pct)}<span>${pctTxt(c.pct)} da meta</span></div>
+      <ul><li>Carteira: +${money(c.vCart)}</li><li>Novos: +${money(c.vN)}</li><li>Reativações: +${money(c.vR)}</li></ul>
+      <div class="ger-cen-d ${c.dif>=0?"ok":"neg"}">${c.dif>=0?`Excedente de ${money(c.dif)}`:`Faltam ${money(-c.dif)} · ≈ ${nInt(c.faltaN)} novos ou ${nInt(c.faltaR)} reativações a mais`}</div>
+    </div>`).join("")}</div>
+    <p class="hint">Valores padrão: novos = 1%, 2% e 4% dos clientes ativos; reativações = 2%, 4% e 8% dos inativos da carteira. Ticket usado: novos ${money(tNovo)}, reativação ${money(tReat)}.</p>
+  </section>`;
+  return h;
+}
+// Campos dos simuladores: só mudam a memória da tela (S.ger) e redesenham.
+function gerChange(el){
+  const G = gerS(); const k = el.dataset.ger; const raw = el.value; const v = raw==="" ? null : Number(raw);
+  if(["time","vend","ref","met","dist"].includes(k)){ G[k] = raw; if(k==="time") G.vend = ""; if(k==="met"){ G.tNovo = null; G.tReat = null; } }
+  else if(k.startsWith("gVend:")){ const id = k.slice(6); if(v==null) delete G.gVend[id]; else G.gVend[id] = v; }
+  else if(k.startsWith("gCli:")){ const id = k.slice(5); if(v==null) delete G.gCli[id]; else G.gCli[id] = v; }
+  else if(k.startsWith("cen:")){ const [,c,f] = k.split(":"); G.cen[c][f] = v==null ? (f==="g" ? 0 : null) : Math.max(0, v); }
+  else if(k==="mixN"){ G.mixN = Math.max(0, Math.min(100, v==null?50:v)); }
+  else if(k==="meta"||k==="tNovo"||k==="tReat"){ G[k] = v==null ? null : Math.max(0, v); }
+  else G[k] = v==null ? 0 : v;
+  render();
+}
 
 /* ---------- Pipeline ---------- */
 function stripStats(pk, list){
@@ -2519,6 +2818,7 @@ function presetsKey(){ return S.viewer; }
 function myPresets(){ DB.presets = DB.presets || {}; return DB.presets[presetsKey()] || (DB.presets[presetsKey()] = []); }
 function renderGfBar(){
   const g = S.gf; const el = $("#gfbar");
+  if(S.view==="gerencial"){ el.innerHTML = ""; return; } // a Visão gerencial tem filtros próprios
   const chev = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
   if(!mesOptions().includes(g.mes)){ g.mes = CUR_MK; g.dtinat = []; g.periodo = []; }
   const btnTxt = k => {
@@ -2612,6 +2912,7 @@ document.addEventListener("click", e=>{
     if(act==="clearFilters"){ S.filters[S.view] = null; render(); return; }
     if(act==="newLead"){ openNewLead(); return; }
     if(act==="import"){ openImport(); return; }
+    if(act==="gerReset"){ S.ger = null; render(); return; }
     if(act==="delLead"){ confirmarExclusao([a.dataset.id]); return; }
     if(act==="bulkDelete"){ confirmarExclusao(Array.from(S.selected)); return; }
     if(act==="confirmDel"){ excluirLeads(S.delIds||[]); return; }
@@ -2685,6 +2986,9 @@ document.addEventListener("change", e=>{
   if(e.target.matches && e.target.matches("[data-gfv]")){ const k = $("#gfpop").dataset.k; const v = e.target.dataset.gfv; const set = new Set(S.gf[k]); e.target.checked ? set.add(v) : set.delete(v); S.gf[k] = Array.from(set); gfApply(); return; } if(e.target.dataset && e.target.dataset.f && e.target.type!=="search") onFilter(e); });
 $("#burger").addEventListener("click", ()=>toggleSide(true));
 $("#scrim").addEventListener("click", ()=>toggleSide(false));
+// Simuladores da Visão gerencial: recalculam ao sair do campo (ou Enter); nada é gravado.
+document.addEventListener("change", e=>{ const el = e.target.closest && e.target.closest("[data-ger]"); if(el && S.view==="gerencial") gerChange(el); });
+document.addEventListener("keydown", e=>{ if(e.key==="Enter" && e.target.matches && e.target.matches("input[data-ger]")){ e.preventDefault(); e.target.blur(); } });
 $("#viewAs").addEventListener("change", e=>{ if(!podeVerComo(e.target.value) && !(e.target.value==="gestor" && S.identAcc==="gestor")) return; S.viewer = e.target.value; S.selectMode=false; S.selected.clear(); S.filters={}; closeGfPop(); render(); });
 
 // Arrastar e soltar
