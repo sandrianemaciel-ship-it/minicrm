@@ -141,6 +141,37 @@ async function lerPastaMestre(cfg, codigos, ref, log){
   });
 }
 
+// ---------- Série mensal por cliente (para a Visão gerencial e os simuladores) ----------
+// Meses: os 6 fechados antes do atual, o mês atual (parcial) e o mesmo mês do ano passado.
+function mesesSerie(ref = hoje()){
+  const out = [];
+  for(let k = -6; k <= 0; k++){ const d = new Date(ref.getFullYear(), ref.getMonth() + k, 1); out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`); }
+  const a = new Date(ref.getFullYear() - 1, ref.getMonth(), 1); out.unshift(`${a.getFullYear()}-${String(a.getMonth() + 1).padStart(2, "0")}`);
+  return out; // [mesmo mês ano passado, m-6 … m-1, mês atual]
+}
+// Faturamento = NF de venda - devolução (mesma medida "Faturamento Comercial" do Qlik);
+// Pedidos = Valor Total de Pedidos (- Canc); Nº de pedidos = pedidos distintos não totalmente cancelados.
+async function lerSerie(cfg, codigos, ref, log){
+  const meses = mesesSerie(ref);
+  return withApp(cfg, async (app) => {
+    await selecionarCodigos(app, "COD_CLIENTE", codigos);
+    const meas = [];
+    meses.forEach(mk => { const [y, m] = mk.split("-").map(Number); const per = `Ano={${y}},Mês={'${MESES[m - 1]}'}`;
+      meas.push(`sum({<${per},TIPO_OPER={'1.Vendas','7.ExtDev'}>} VALOR_RECEITA)`, `sum({<${per}>} VL_TOTAL)`,
+        `count({<${per},TIPO_OPER={'11.Pedidos'},SITUACAO_PEDIDO-={'TOTALMENTE CANCELADO'}>} distinct CD_PEDIDO)`); });
+    meas.push("max(DT_PRIFAT)", "max(DT_REATIVACAO)");
+    const rows = await cubo(app, ["COD_CLIENTE"], meas, { qSuppressZero: false });
+    const mapa = new Map(); const n = meses.length;
+    for(const r of rows){
+      const fat = [], ped = [], np = [];
+      for(let i = 0; i < n; i++){ fat.push(Math.round(num(r[1 + i * 3]))); ped.push(Math.round(num(r[2 + i * 3]))); np.push(num(r[3 + i * 3])); }
+      mapa.set(codNorm(txt(r[0])), { fat, ped, np, dtPri: serialToIso(num(r[1 + n * 3])), dtReat: serialToIso(num(r[2 + n * 3])) });
+    }
+    log(`Série mensal (${meses[0]} e ${meses[1]} a ${meses[n - 1]}): ${mapa.size} clientes.`);
+    return { meses, mapa };
+  });
+}
+
 const mediana = a => { if(!a.length) return 0; const s = a.slice().sort((x, y) => x - y); const k = Math.floor(s.length / 2); return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2; };
 
 // Mix sugerido: itens que o cliente comprou menos este ano (jan..mês anterior) que no ano passado,
@@ -198,6 +229,8 @@ async function analisarClientes(db, cfg, clientes, { dry, log = console.log, ref
   const codigos = [...new Set(clientes.map(c => codNorm(c.cod)).filter(Boolean))];
   const pot = await lerPotenciais(cfg, ref, log);
   const pm = await lerPastaMestre(cfg, codigos, ref, log);
+  let serie = null;
+  try{ serie = await lerSerie(cfg, codigos, ref, log); }catch(e){ log("Série mensal não lida: " + e.message); }
   const segDe = (() => { const m = new Map(clientes.map(c => [codNorm(c.cod), c.seg || null])); return cod => m.get(cod); })();
   const cruzadas = montarCruzadas(pm.itens, segDe);
   const porCli = new Map(); pm.itens.forEach(i => (porCli.get(i.cod) || porCli.set(i.cod, []).get(i.cod)).push(i));
@@ -208,12 +241,13 @@ async function analisarClientes(db, cfg, clientes, { dry, log = console.log, ref
     const potO = p ? { v25: p.v25, v26: p.v26, leg: classificaYoy(p.v25, p.v26), anoAnt: pot.ano - 1, ano: pot.ano, per: refTxt } : null;
     cont[potO ? potO.leg : "sem"]++;
     const analise = { dia, per: refTxt, ano: pot.ano, pot: potO, fin: pm.fin.get(k) || null, mix: mixSugerido(porCli.get(k) || []), cross: cruzadas(k) };
+    if(serie){ const sr = serie.mapa.get(k); analise.serie = sr ? Object.assign({ meses: serie.meses }, sr) : { meses: serie.meses, fat: [], ped: [], np: [], dtPri: null, dtReat: null }; }
     return [db.doc("hub_clientes/" + docIdCod(c.cod)), { analise }, true];
   });
   log(`Análise de clientes: ${cont.Potencial} potenciais · ${cont["Deficitário"]} deficitários · ${cont["Não comprou"]} não compraram · ${cont.sem} sem pedidos em ${refTxt} dos dois anos.`);
   log(`Mix sugerido para ${ops.filter(o => o[1].analise.mix.length).length} clientes · itens novos sugeridos para ${ops.filter(o => o[1].analise.cross.length).length}.`);
   await commitEmLotes(db, ops, dry);
-  if(!dry) await db.doc("hub_sync/analise").set({ dia, em: new Date().toISOString(), per: refTxt, ano: pot.ano, clientes: ops.length, cont });
+  if(!dry) await db.doc("hub_sync/analise").set({ dia, em: new Date().toISOString(), per: refTxt, ano: pot.ano, clientes: ops.length, cont, meses: serie ? serie.meses : null });
   return cont;
 }
 
@@ -227,4 +261,4 @@ async function gravarMetas(db, cfg, apelidos, { dry, log = console.log, ref = ho
   return { porPessoa, du };
 }
 
-module.exports = { diasUteisRestantes, metasPorPessoa, calcMeta, classificaYoy, mixSugerido, montarCruzadas, analisarClientes, gravarMetas, codNorm, LINHA_ORTHO };
+module.exports = { mesesSerie, diasUteisRestantes, metasPorPessoa, calcMeta, classificaYoy, mixSugerido, montarCruzadas, analisarClientes, gravarMetas, codNorm, LINHA_ORTHO };

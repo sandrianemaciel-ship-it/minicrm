@@ -30,4 +30,6 @@ itens.push({ cod: "z", item: "X", qt: 1, pu: 10 });
 const cr = A.montarCruzadas(itens, () => "FARMA")("z");
 assert.strictEqual(cr[0].item, "Y"); assert.strictEqual(cr[0].base, "X"); assert.ok(cr[0].conf >= 0.8); assert.strictEqual(cr[0].pu, 24.5);
 assert.strictEqual(A.codNorm("0001073887"), "1073887");
+assert.deepStrictEqual(A.mesesSerie(new Date(2026, 9, 14)), ["2025-10", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"]);
+assert.deepStrictEqual(A.mesesSerie(new Date(2026, 1, 3)).slice(0, 3), ["2025-02", "2025-08", "2025-09"]);
 console.log("Testes OK: metas (falta ÷ dias úteis, Ortho 10%), potencial x deficitário, mix sugerido e itens sugeridos.");
