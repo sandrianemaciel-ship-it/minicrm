@@ -187,6 +187,12 @@ td input[type=checkbox], th input[type=checkbox]{accent-color:var(--accent); wid
 .bulkbar b{font-variant-numeric:tabular-nums;}
 .bulkbar select{background:var(--surface); color:var(--ink); border:0; border-radius:8px; padding:7px 8px; flex:1 1 220px; min-width:0;}
 .bulkbar .btn{border-color:transparent;}
+.selall-top{display:flex; align-items:center; gap:12px; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin:0 0 10px; font-size:13px;}
+.selall-top label{display:flex; align-items:center; gap:8px; cursor:pointer;}
+.selall-top span{color:var(--ink-dim);}
+.col-title .selcol{width:15px; height:15px; margin:0; cursor:pointer;}
+.btn.danger{background:var(--bad); color:#fff; border-color:var(--bad);}
+.btn.danger:disabled{opacity:.5;}
 .bulkbar .lnk{background:none; border:0; color:var(--bg); opacity:.75; cursor:pointer; text-decoration:underline;}
 
 /* ---------- Painel ---------- */
@@ -891,6 +897,11 @@ function podeVerComo(id){
   const o = person(id); return !!o && o.time===me.time;
 }
 const isGestor = () => viewerRole()==="gestor";
+// Excluir leads: gestão (acesso total) e líderes (acesso de equipe), só nos leads que eles enxergam.
+function podeExcluirLeads(){ if(S.identAcc==="gestor") return true; const me = person(S.identAcc); return !!me && me.acesso==="equipe"; }
+function podeExcluirLead(l){ return !!l && l.empresa!==undefined && podeExcluirLeads() && (S.identAcc==="gestor" || !l.owner || podeVer(l.owner)); }
+// Quem pode entrar no modo de seleção nesta tela (atribuir = gestão; excluir leads = gestão e líderes).
+function podeSelecionar(pk){ return isGestor() || ((pk==="prospeccao" || pk==="distribuicao") && podeExcluirLeads()); }
 
 function visibleClients(pk){
   return DB.clients.filter(c=> (!PIPES[pk].pipe || c.pipe===PIPES[pk].pipe) && podeVer(c.vend) && gfOk(c));
@@ -1097,7 +1108,7 @@ function renderPipe(pk){
   const all = itemsOf(pk); const list = applyFilters(pk, all);
   const lay = S.layout[pk];
   let actions = `<div class="seg-ctl" role="group" aria-label="Visualização"><button type="button" data-act="layout" data-v="board" class="${lay==="board"?"active":""}">Quadro</button><button type="button" data-act="layout" data-v="list" class="${lay==="list"?"active":""}">Lista</button></div>`;
-  if(g) actions += `<button class="btn${S.selectMode?" on":""}" data-act="selectMode" type="button">${S.selectMode?"Sair da seleção":"Selecionar para atribuir"}</button>`;
+  if(podeSelecionar(pk)) actions += `<button class="btn${S.selectMode?" on":""}" data-act="selectMode" type="button">${S.selectMode?"Sair da seleção":(g?"Selecionar para atribuir":"Selecionar para excluir")}</button>`;
   if(P.kind==="lead"){
     if(g) actions += `<button class="btn" data-act="import" type="button">Importar leads</button>`;
     actions += `<button class="btn primary" data-act="newLead" type="button">+ Novo lead</button>`;
@@ -1106,6 +1117,10 @@ function renderPipe(pk){
   h += renderFilters(pk, all);
   h += stripStats(pk, list);
   if(pk==="prospeccao") h += renderSegKpi(all);
+  if(S.selectMode && podeSelecionar(pk)){
+    const vis = bulkList(); const todos = vis.length && vis.every(i=>S.selected.has(i.id));
+    h += `<div class="selall-top"><label><input type="checkbox" data-selall="1"${todos?" checked":""}> <b>Selecionar todos</b> (${vis.length} na tela)</label><span>${S.selected.size} selecionado${S.selected.size===1?"":"s"}</span></div>`;
+  }
   h += lay==="board" ? renderBoard(pk, list) : renderList(pk, list);
   return h;
 }
@@ -1166,13 +1181,13 @@ function renderBoard(pk, list){
     const sub = st.end==="won" ? money(items.reduce((a,i)=>a+(i.valor||0),0)) : (P.kind==="lead" ? "potencial "+moneyK(sum) : (st.hint||""));
     const shown = items.slice(0,60);
     return `<section class="col" data-stage="${st.k}" aria-label="${esc(st.label)}">
-      <div class="col-head"><div class="col-title"><span class="bar" style="background:${st.color}"></span>${st.label}<span class="n">${items.length}</span></div><div class="col-sub"><span>${sub||""}</span><button type="button" class="sortbtn" data-act="colSort" data-k="${ck}" title="${P.kind==="lead"?"Ordena pela data de entrada do lead":"Ordena pela data em que entrou na etapa"}">${asc?"↑ Mais antigos":"↓ Mais recentes"}</button></div></div>
+      <div class="col-head"><div class="col-title">${S.selectMode && podeSelecionar(pk)?`<input type="checkbox" class="selcol" data-selcol="${st.k}" style="accent-color:${st.color}"${items.length && items.every(i=>S.selected.has(i.id))?" checked":""}${items.length?"":" disabled"} aria-label="Selecionar todos de ${esc(st.label)}" title="Selecionar todos desta etapa">`:`<span class="bar" style="background:${st.color}"></span>`}${st.label}<span class="n">${items.length}</span></div><div class="col-sub"><span>${sub||""}</span><button type="button" class="sortbtn" data-act="colSort" data-k="${ck}" title="${P.kind==="lead"?"Ordena pela data de entrada do lead":"Ordena pela data em que entrou na etapa"}">${asc?"↑ Mais antigos":"↓ Mais recentes"}</button></div></div>
       <div class="col-body">${shown.map(i=>renderCard(pk,i)).join("") || `<div class="col-empty">Arraste um card para cá</div>`}${items.length>shown.length?`<div class="col-empty">+${items.length-shown.length} na visão Lista</div>`:""}</div>
     </section>`;
   }).join("")}</div></div>`;
 }
 function renderList(pk, list){
-  const P = PIPES[pk]; const g = isGestor() && S.selectMode;
+  const P = PIPES[pk]; const g = podeSelecionar(pk) && S.selectMode;
   const allSel = list.length && list.every(i=>S.selected.has(i.id));
   const order = Object.fromEntries(P.stages.map((s,i)=>[s.k,i]));
   const asc = !!S.listAsc[pk];
@@ -1204,7 +1219,8 @@ function bulkList(){ return S.view==="distribuicao" ? distList() : applyFilters(
 function renderBulk(){
   const bar = $("#bulkbar");
   const pk = bulkPk();
-  const on = isGestor() && (S.view==="distribuicao" || (S.selectMode && PIPES[S.view]));
+  const gest = isGestor();
+  const on = (gest && (S.view==="distribuicao" || (S.selectMode && PIPES[S.view]))) || (!gest && S.selectMode && podeSelecionar(S.view));
   if(!on){ bar.hidden = true; return; }
   const P = PIPES[pk];
   const visible = bulkList();
@@ -1214,10 +1230,11 @@ function renderBulk(){
   bar.innerHTML = `<span><b>${n}</b> ${n===1?"selecionado":"selecionados"}</span>
     <button class="lnk" data-act="selVisible" type="button">Selecionar os ${visible.length} da tela</button>
     ${P.kind==="lead" && semDono? `<button class="lnk" data-act="selSemDono" type="button">Selecionar os ${semDono} sem responsável</button>`:""}
-    <select id="bulkOwner" aria-label="Atribuir a">${ownerOptions(P.kind, null, {none:P.kind==="lead", rodizio:P.kind==="lead"})}</select>
-    <button class="btn primary" data-act="bulkApply" type="button"${n?"":" disabled"}>Atribuir</button>
+    ${gest?`<select id="bulkOwner" aria-label="Atribuir a">${ownerOptions(P.kind, null, {none:P.kind==="lead", rodizio:P.kind==="lead"})}</select>
+    <button class="btn primary" data-act="bulkApply" type="button"${n?"":" disabled"}>Atribuir</button>`:`<span style="flex:1"></span>`}
+    ${P.kind==="lead" && podeExcluirLeads()?`<button class="btn danger" data-act="bulkDelete" type="button"${n?"":" disabled"}>Excluir${n?" "+n:""}</button>`:""}
     <button class="lnk" data-act="selClear" type="button">Limpar</button>`;
-  if(P.kind==="lead") $("#bulkOwner").value = "__rodizio";
+  if(gest && P.kind==="lead") $("#bulkOwner").value = "__rodizio";
 }
 function assignItems(ids, target){
   const items = ids.map(findItem).filter(Boolean);
@@ -1593,7 +1610,7 @@ function openDetail(id){
   const hist = `<div class="fld"><span>Histórico</span><ul class="hist">${(it.hist||[]).map(h=>`<li><time>${fd(h.d)}</time><span>${esc(h.t)}</span></li>`).join("")||"<li>Sem registros.</li>"}</ul></div>`;
   openModal(`<div class="m-head"><div><h2>${esc(name)}</h2><p>${P.label} · ${stageOf(pk,it.stage).label}${ed?"":" · somente leitura"}</p></div><button class="x" data-act="close" type="button" aria-label="Fechar">×</button></div>
     <div class="m-body">${kvH}${steps}${form}<div class="fld"><span>Histórico de CRM (todos os responsáveis)</span>${crmHtml(it)}</div>${hist.replace("<span>Histórico</span>","<span>Movimentações</span>")}</div>
-    <div class="m-foot"><button class="btn" type="button" data-act="close">Fechar</button>${ed?`<button class="btn primary" type="button" data-act="saveDetail" data-id="${it.id}">Salvar</button>`:""}</div>`);
+    <div class="m-foot">${isLead && podeExcluirLead(it)?`<button class="btn danger" type="button" data-act="delLead" data-id="${it.id}">Excluir lead</button><span style="flex:1"></span>`:""}<button class="btn" type="button" data-act="close">Fechar</button>${ed?`<button class="btn primary" type="button" data-act="saveDetail" data-id="${it.id}">Salvar</button>`:""}</div>`);
   wireOfensor("d-of", it.ofDet);
   if(!ed) document.querySelectorAll("#d-of, #d-of-det input, #d-of-det textarea, #d-of-det select").forEach(el=>el.disabled = true);
 }
@@ -1659,9 +1676,10 @@ function openNewLead(){
 }
 
 function openImport(){
-  openModal(`<div class="m-head"><div><h2>Importar leads</h2><p>Copie as linhas do Excel e cole abaixo. Uma linha por lead.</p></div><button class="x" data-act="close" type="button" aria-label="Fechar">×</button></div>
+  openModal(`<div class="m-head"><div><h2>Importar leads</h2><p>Envie uma planilha do Excel (.xlsx, .xls ou .csv) ou cole as linhas abaixo. Uma linha por lead.</p></div><button class="x" data-act="close" type="button" aria-label="Fechar">×</button></div>
     <form id="impForm"><div class="m-body">
       <p class="hint">Ordem das colunas: <b>Empresa · CNPJ · Contato · Telefone · UF · Cidade · Segmento · Origem</b>. Só a Empresa é obrigatória. Se a primeira linha for o cabeçalho, ela é ignorada.</p>
+      <label class="fld"><span>Arquivo do Excel</span><input id="i-file" type="file" accept=".xlsx,.xls,.xlsm,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"><span class="note">Com cabeçalho, as colunas são reconhecidas pelo nome (Empresa, CNPJ, Contato, Telefone, UF, Cidade, Segmento, Origem), em qualquer ordem.</span></label>
       <label class="fld"><span>Linhas</span><textarea id="i-txt" style="min-height:150px" placeholder="Drogaria Exemplo	12.345.678/0001-90	Maria	(51) 99999-0000	RS	Canoas	FARMA INDEPENDENTE	Feira Abradilan 2026"></textarea></label>
       <p class="hint">Segmentos e origens que ainda não existem são criados na importação.</p>
       <label class="fld"><span>Atribuir a</span><select id="i-owner">${ownerOptions("lead", null, {none:true, rodizio:true})}</select></label>
@@ -1671,6 +1689,12 @@ function openImport(){
   $("#i-owner").value = "__rodizio";
   const prev = ()=>{ const rows = parseImport($("#i-txt").value); $("#i-prev").textContent = rows.length? `${rows.length} ${rows.length===1?"lead pronto":"leads prontos"} para importar.` : "Nenhuma linha válida ainda."; };
   $("#i-txt").addEventListener("input", prev);
+  $("#i-file").addEventListener("change", async e=>{
+    const f = e.target.files[0]; if(!f) return;
+    $("#i-prev").textContent = "Lendo "+f.name+"…";
+    try{ $("#i-txt").value = await lerPlanilha(f); prev(); }
+    catch(err){ console.error(err); $("#i-prev").textContent = "Não consegui ler esse arquivo ("+err.message+"). Confira se é uma planilha do Excel."; }
+  });
   $("#impForm").onsubmit = e=>{
     e.preventDefault();
     const rows = parseImport($("#i-txt").value);
@@ -1687,6 +1711,57 @@ function openImport(){
     const t = $("#i-owner").value; if(t) assignItems(ids, t);
     closeModal(); save(); toast(`${ids.length} leads importados${t?" e atribuídos":""}.`);
   };
+}
+/* ---------- Exclusão de leads (gestão e líderes) ---------- */
+function confirmarExclusao(ids){
+  const leads = ids.map(findItem).filter(l=> l && l.empresa!==undefined);
+  const ok = leads.filter(podeExcluirLead); const fora = leads.length - ok.length;
+  if(!ok.length){ toast(fora? "Você não tem permissão para excluir esses leads." : "Selecione ao menos um lead."); return; }
+  S.delIds = ok.map(l=>l.id);
+  const nomes = ok.slice(0,8).map(l=>`<li>${esc(l.empresa)}${l.owner?` · ${esc(nameOf(l.owner))}`:""}</li>`).join("") + (ok.length>8?`<li>… e mais ${ok.length-8}</li>`:"");
+  openModal(`<div class="m-head"><div><h2>Excluir ${ok.length===1?"lead":ok.length+" leads"}?</h2><p>Esta ação não pode ser desfeita.</p></div><button class="x" data-act="close" type="button" aria-label="Fechar">×</button></div>
+    <div class="m-body"><ul class="hint" style="margin:0 0 8px 18px">${nomes}</ul>${fora?`<p class="hint">${fora} ${fora===1?"lead selecionado não é":"leads selecionados não são"} da sua equipe e ${fora===1?"ficará":"ficarão"} de fora.</p>`:""}</div>
+    <div class="m-foot"><button class="btn" type="button" data-act="close">Cancelar</button><button class="btn danger" type="button" data-act="confirmDel">Excluir ${ok.length===1?"lead":ok.length+" leads"}</button></div>`, true);
+}
+async function excluirLeads(ids){
+  ids = ids.filter(id=> podeExcluirLead(findItem(id)));
+  if(!ids.length){ closeModal(); return; }
+  const set = new Set(ids);
+  const removidos = DB.leads.filter(l=>set.has(l.id));
+  DB.leads = DB.leads.filter(l=>!set.has(l.id));
+  ids.forEach(id=>{ S.selected.delete(id); SNAP.delete("l:"+id); });
+  S.delIds = null; closeModal(); render();
+  try{
+    for(let i=0;i<ids.length;i+=400){ const b = fdb.batch(); ids.slice(i,i+400).forEach(id=> b.delete(fdb.doc(COL.lead+"/"+id))); await b.commit(); }
+    fdb.collection(COL.hist).add({ tipo:"exclusao_leads", d:new Date().toISOString(), por:autorAtual(), qtd:ids.length, leads:removidos.slice(0,200).map(l=>({id:l.id, empresa:l.empresa, owner:l.owner||null})) }).catch(()=>{});
+    toast(`${ids.length} ${ids.length===1?"lead excluído":"leads excluídos"}.`);
+  }catch(e){
+    console.error(e); DB.leads.push(...removidos); render();
+    toast("Não consegui excluir no banco. Confira a internet e tente de novo.");
+  }
+}
+
+/* ---------- Importação por planilha (.xlsx, .xls, .csv) ---------- */
+const XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+function carregarXlsx(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((res, rej)=>{ const sc = document.createElement("script"); sc.src = XLSX_URL; sc.onload = ()=>res(window.XLSX); sc.onerror = ()=>rej(new Error("não carregou o leitor de Excel")); document.head.appendChild(sc); });
+}
+// Lê a primeira aba e devolve as linhas na ordem do Hub. Se a planilha tiver cabeçalho,
+// as colunas são reconhecidas pelo nome (em qualquer ordem).
+const IMP_COLS = [["empresa",/^(empresa|raz[aã]o social|nome( fantasia)?|cliente|lead)$/],["cnpj",/^(cnpj|cpf\/?cnpj|documento)$/],["contato",/^(contato|respons[aá]vel|comprador|nome do contato)$/],
+  ["tel",/^(telefone|fone|celular|whats ?app|tel)$/],["uf",/^(uf|estado)$/],["cid",/^(cidade|munic[ií]pio)$/],["seg",/^(segmento|seg)$/],["origem",/^(origem|fonte|campanha)$/]];
+async function lerPlanilha(file){
+  const X = await carregarXlsx();
+  const wb = X.read(await file.arrayBuffer(), {type:"array"});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = X.utils.sheet_to_json(ws, {header:1, raw:false, defval:""}).map(r=>r.map(c=>String(c==null?"":c).replace(/[\t\r\n]+/g," ").trim())).filter(r=>r.some(Boolean));
+  if(!rows.length) return "";
+  const head = rows[0].map(h=>norm(h).toLowerCase());
+  const idx = IMP_COLS.map(([,re])=> head.findIndex(h=>re.test(h)));
+  const temCab = idx[0]>=0;
+  const corpo = temCab ? rows.slice(1) : rows;
+  return corpo.map(r=> temCab ? idx.map(i=> i>=0 ? (r[i]||"") : "").join("\t") : r.slice(0,8).join("\t")).join("\n");
 }
 function parseImport(txt){
   return txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
@@ -2447,6 +2522,9 @@ document.addEventListener("click", e=>{
     if(act==="clearFilters"){ S.filters[S.view] = null; render(); return; }
     if(act==="newLead"){ openNewLead(); return; }
     if(act==="import"){ openImport(); return; }
+    if(act==="delLead"){ confirmarExclusao([a.dataset.id]); return; }
+    if(act==="bulkDelete"){ confirmarExclusao(Array.from(S.selected)); return; }
+    if(act==="confirmDel"){ excluirLeads(S.delIds||[]); return; }
     if(act==="fillSample"){ $("#i-txt").value = SAMPLE_IMPORT; $("#i-txt").dispatchEvent(new Event("input")); return; }
     if(act==="saveDetail"){ saveDetail(a.dataset.id); return; }
     if(act==="gfToggle"){ S.gfOpen = !S.gfOpen; renderGfBar(); return; }
@@ -2489,6 +2567,7 @@ document.addEventListener("click", e=>{
   const mv = t.closest("[data-move]");
   if(mv){ if(mv.disabled) return; const id = $("[data-act=saveDetail]")?.dataset.id; if(id){ const it = findItem(id); closeModal(); requestMove(it.id, mv.dataset.move); } return; }
   if(t.matches("[data-sel]")){ const id=t.dataset.sel; t.checked? S.selected.add(id): S.selected.delete(id); render(); return; }
+  if(t.matches("[data-selcol]")){ const k = t.dataset.selcol; bulkList().filter(i=>i.stage===k).forEach(i=> t.checked? S.selected.add(i.id): S.selected.delete(i.id)); render(); return; }
   if(t.matches("[data-selall]")){ const list = bulkList(); list.forEach(i=> t.checked? S.selected.add(i.id): S.selected.delete(i.id)); render(); return; }
   const og = t.closest("[data-owner-go]");
   if(og){ S.view = "prospeccao"; S.gf.vend = [og.dataset.ownerGo]; render(); window.scrollTo(0,0); return; }
