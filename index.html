@@ -867,6 +867,8 @@ function idsVisiveis(){
   const me = person(S.identAcc);
   return new Set(DB.people.filter(p=> p.id===S.identAcc || (me && me.acesso==="equipe" && me.time && p.time===me.time)).map(p=>p.id));
 }
+// O robô grava o conteúdo do pacote como texto (campo "dados"); "itens" fica para pacotes antigos.
+function itensPacote(o, vazio){ try{ return o.dados ? JSON.parse(o.dados) : (o.itens || vazio); }catch(e){ console.error(e); return vazio; } }
 const resumoAnalise = a => a ? { pot: a.pot||null, dia: a.dia||null } : null;
 function cliDoPacote(o){ const c = {...o}; const id = c._id; delete c._id; c.cod = c.cod || id; c.id = "c"+id; return c; }
 function cliDoDoc(d){ const o = d.data(); Object.keys(o).forEach(k=>{ o[k] = toMs(o[k]); }); o.analise = resumoAnalise(o.analise); o.cod = o.cod || d.id; o.id = "c"+d.id; return o; }
@@ -889,7 +891,7 @@ async function carregarClientes(){
   const ids = vends.flatMap(v=>pac.indice[v]||[]);
   if(!cache || cache.builtAt!==pac.builtAt || cache.escopo!==vends.join(",")){
     const docs = await Promise.all(ids.map(id=>fdb.doc(COL.sync+"/"+id).get()));
-    const clientes = {}; docs.forEach(d=>{ if(d.exists) (d.data().itens||[]).forEach(o=>{ clientes[o._id] = o; }); });
+    const clientes = {}; docs.forEach(d=>{ if(d.exists) itensPacote(d.data(), []).forEach(o=>{ clientes[o._id] = o; }); });
     cache = { chave, builtAt:pac.builtAt, escopo:vends.join(","), wm:pac.builtAt, clientes };
     S.pacInfo = { baixados:ids.length, total:ids.length };
   } else S.pacInfo = { baixados:0, total:ids.length };
@@ -962,7 +964,7 @@ function garantirAnalise(vends){
       let c = await IDB.get("an:"+v);
       if(!c || c.dia!==pac.anDia){
         const docs = await Promise.all((pac.anIndice[v]||[]).map(id=>fdb.doc(COL.sync+"/"+id).get()));
-        const itens = {}; docs.forEach(d=>{ if(d.exists) Object.assign(itens, d.data().itens||{}); });
+        const itens = {}; docs.forEach(d=>{ if(d.exists) Object.assign(itens, itensPacote(d.data(), {})); });
         c = { dia:pac.anDia, itens }; IDB.set("an:"+v, c);
       }
       Object.assign(DB.anal, c.itens); anCarregado.add(v);
