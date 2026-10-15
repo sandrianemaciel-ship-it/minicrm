@@ -417,6 +417,33 @@ async function discoverTestes2(cfg, log = console.log){
   });
 }
 
+// Reconhecimento 3: objetos mestres da pasta Potenciais x Não Comprou x Deficitários (só leitura).
+async function discoverTestes3(cfg, log = console.log){
+  const log0 = log; log = (...x) => log0(x.join(" ").replace(/[{}]/g, c => c === "{" ? "«" : "»"));
+  await withApp(cfg, async (app) => {
+    const lib = async (id) => { if(!id) return ""; try{ const m = await app.getMeasure(id); const p = await m.getProperties(); return ` [lib ${p.qMeasure.qLabel}: ${p.qMeasure.qDef}]`; }catch(e){ try{ const d = await app.getDimension(id); const p = await d.getProperties(); return ` [lib dim ${(p.qDim.qFieldDefs || []).join("+")}]`; }catch(e2){ return ` [lib ${id}?]`; } } };
+    for(const id of ["846be7f8-be99-439e-8062-c9ffb4c95a00", "2f8b2717-fc87-4d5b-93f3-781f0e3e9cae", "22dba5db-a50c-45ed-8420-601ce0046133"]){
+      try{
+        const o = await app.getObject(id); const p = await o.getProperties();
+        log(`obj ${id} tipo ${p.qInfo.qType} viz ${p.visualization || ""} titulo ${JSON.stringify(p.title || "")}`);
+        const hc = p.qHyperCubeDef;
+        if(!hc){ log("  props: " + JSON.stringify(p).slice(0, 3000)); continue; }
+        for(const d of hc.qDimensions || []) log(`  dim: ${(d.qDef.qFieldDefs || []).join("+")} label=${JSON.stringify(d.qDef.qFieldLabels || [])}${await lib(d.qLibraryId)}`);
+        for(const m of hc.qMeasures || []) log(`  med: "${(m.qDef && m.qDef.qLabel) || ""}" = ${String((m.qDef && m.qDef.qDef) || "").slice(0, 2500)}${await lib(m.qLibraryId)}`);
+        const lay = await o.getLayout(); const sz = lay.qHyperCube.qSize; log(`  tamanho ${sz.qcy} x ${sz.qcx} modo ${lay.qHyperCube.qMode}`);
+        if(lay.qHyperCube.qMode === "P"){
+          const pg = await o.getHyperCubePivotData("/qHyperCubeDef", [{ qTop: 0, qLeft: 0, qWidth: Math.min(sz.qcx, 15), qHeight: 8 }]);
+          log("  topo: " + (pg[0].qTop || []).map(x => x.qText + (x.qSubNodes && x.qSubNodes.length ? "(" + x.qSubNodes.map(s => s.qText).join("/") + ")" : "")).join(" | "));
+          (pg[0].qLeft || []).slice(0, 8).forEach((l, i) => log(`  ${l.qText}: ${(pg[0].qData[i] || []).map(c => c.qText).join(" | ")}`));
+        }else{
+          const r = await o.getHyperCubeData("/qHyperCubeDef", [{ qTop: 0, qLeft: 0, qWidth: Math.min(sz.qcx, 30), qHeight: 8 }]);
+          r[0].qMatrix.forEach(row => log("  | " + row.map(c => c.qText).join(" | ")));
+        }
+      }catch(e){ log(`!! ${id}: ${e.message}`); }
+    }
+  });
+}
+
 function explainSocketError(err, d, url){
   const parts = [`Não foi possível conectar ao Qlik (${url}).`];
   if(d.http) parts.push(`Resposta HTTP ${d.http}.`);
@@ -433,4 +460,4 @@ function explainSocketError(err, d, url){
   return parts.join(" ");
 }
 
-module.exports = { fetchTable, fetchPedidos, isoToSerial, withApp, discoverApp, discoverTestes, discoverTestes2, buildSocketUrl, cellValue, readAllPages, orderedHeaders };
+module.exports = { fetchTable, fetchPedidos, isoToSerial, withApp, discoverApp, discoverTestes, discoverTestes2, discoverTestes3, buildSocketUrl, cellValue, readAllPages, orderedHeaders };
