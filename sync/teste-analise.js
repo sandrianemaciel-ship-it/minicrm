@@ -43,7 +43,7 @@ const r = P.montar(docs, an);
 const pc = r.docs.filter(d => d[0].startsWith("pc_"));
 assert.ok(pc.every(d => JSON.stringify(d[1]).length < 1024 * 1024), "cada pacote abaixo de 1 MB");
 assert.ok(r.indice["ana-souza"].length >= 2, "carteira grande vira mais de um pacote");
-const c101 = pc.flatMap(d => d[1].itens).find(o => o._id === "101");
+const c101 = pc.flatMap(d => JSON.parse(d[1].dados)).find(o => o._id === "101");
 assert.deepStrictEqual(c101.analise, { pot: { leg: "Potencial" }, dia: "2026-10-15" }); assert.strictEqual(c101.upd, 1700000000000);
 assert.deepStrictEqual(r.anIndice, { "ana-souza": ["an_ana-souza_0"] });
 console.log("Testes OK: pacotes da carteira por vendedor e pacotes de análise.");

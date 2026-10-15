@@ -7,6 +7,8 @@
 const { isoLocal, hoje } = require("./hub");
 
 const LIMITE = 600 * 1024; // bem abaixo do limite de 1 MB por documento do Firestore
+// O conteúdo vai como texto (JSON) num único campo: o Firestore indexa cada campo de um mapa, e um pacote com
+// centenas de clientes passaria do limite de entradas de índice por documento.
 const slug = v => String(v || "sem-vendedor").toLowerCase().replace(/[^a-z0-9-]+/g, "-").slice(0, 60) || "sem-vendedor";
 const ms = v => v && typeof v.toMillis === "function" ? v.toMillis() : v;
 
@@ -42,10 +44,10 @@ function montar(clientesDocs, analises){
   }
   const docs = []; const indice = {}; const anIndice = {};
   for(const [v, lista] of porVend){
-    partir(lista).forEach((parte, i) => { const id = `pc_${v}_${i}`; docs.push([id, { vend: v, i, itens: parte }]); (indice[v] = indice[v] || []).push(id); });
+    partir(lista).forEach((parte, i) => { const id = `pc_${v}_${i}`; docs.push([id, { vend: v, i, n: parte.length, dados: JSON.stringify(parte) }]); (indice[v] = indice[v] || []).push(id); });
   }
   for(const [v, lista] of anPorVend){
-    partir(lista, it => JSON.stringify(it[1]).length + 20).forEach((parte, i) => { const id = `an_${v}_${i}`; docs.push([id, { vend: v, i, itens: Object.fromEntries(parte) }]); (anIndice[v] = anIndice[v] || []).push(id); });
+    partir(lista, it => JSON.stringify(it[1]).length + 20).forEach((parte, i) => { const id = `an_${v}_${i}`; docs.push([id, { vend: v, i, n: parte.length, dados: JSON.stringify(Object.fromEntries(parte)) }]); (anIndice[v] = anIndice[v] || []).push(id); });
   }
   return { docs, indice, anIndice };
 }
