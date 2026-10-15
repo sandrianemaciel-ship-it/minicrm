@@ -1769,12 +1769,14 @@ function openImport(){
       <label class="fld"><span>Arquivo do Excel</span><input id="i-file" type="file" accept=".xlsx,.xls,.xlsm,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"><span class="note">Com cabeçalho, as colunas são reconhecidas pelo nome (Empresa, CNPJ, Contato, Telefone, UF, Cidade, Segmento, Origem), em qualquer ordem.</span></label>
       <label class="fld"><span>Linhas</span><textarea id="i-txt" style="min-height:150px" placeholder="Drogaria Exemplo	12.345.678/0001-90	Maria	(51) 99999-0000	RS	Canoas	FARMA INDEPENDENTE	Feira Abradilan 2026"></textarea></label>
       <p class="hint">Segmentos e origens que ainda não existem são criados na importação.</p>
+      <div class="fld"><span>Origem da prospecção</span><div class="sel-plus"><select id="i-orig" data-list="orig">${origOptionsHtml(null, "Usar a coluna Origem da planilha", true)}</select>${plusBtn("orig","i-orig")}</div><span class="note">A origem escolhida vale para todos os leads desta lista. Deixe em "Usar a coluna Origem da planilha" para manter a origem de cada linha (sem origem na linha, entra como "Importação").</span></div>
       <label class="fld"><span>Atribuir a</span><select id="i-owner">${ownerOptions("lead", null, {none:true, rodizio:true})}</select></label>
       <div class="hint" id="i-prev">Nenhuma linha colada ainda.</div>
     </div>
     <div class="m-foot"><button class="btn" type="button" data-act="fillSample">Colar exemplo</button><span style="flex:1"></span><button class="btn" type="button" data-act="close">Cancelar</button><button class="btn primary" type="submit">Importar</button></div></form>`);
   $("#i-owner").value = "__rodizio";
-  const prev = ()=>{ const rows = parseImport($("#i-txt").value); $("#i-prev").textContent = rows.length? `${rows.length} ${rows.length===1?"lead pronto":"leads prontos"} para importar.` : "Nenhuma linha válida ainda."; };
+  const prev = ()=>{ const rows = parseImport($("#i-txt").value); const o = $("#i-orig").value; $("#i-prev").textContent = rows.length? `${rows.length} ${rows.length===1?"lead pronto":"leads prontos"} para importar${o?` com a origem ${o}`:""}.` : "Nenhuma linha válida ainda."; };
+  $("#i-orig").addEventListener("change", prev);
   $("#i-txt").addEventListener("input", prev);
   $("#i-file").addEventListener("change", async e=>{
     const f = e.target.files[0]; if(!f) return;
@@ -1786,8 +1788,9 @@ function openImport(){
     e.preventDefault();
     const rows = parseImport($("#i-txt").value);
     if(!rows.length){ $("#i-prev").textContent = "Cole ao menos uma linha com o nome da empresa."; return; }
+    const origLista = $("#i-orig").value;
     const ids = rows.map(r=>{
-      const o = r.origem || "Importação";
+      const o = origLista || r.origem || "Importação";
       if(!origList().some(x=>x.n===o)) DB.origens.push({n:o, modo:"ativa"});
       if(r.seg && !segList().includes(r.seg)) DB.segmentos.push(r.seg);
       const L = { id:"l"+uid(), empresa:r.empresa, cnpj:r.cnpj, contato:r.contato, tel:r.tel, email:"", uf:(r.uf||"RS").toUpperCase().slice(0,2), cid:r.cid||"—",
@@ -1796,7 +1799,7 @@ function openImport(){
       DB.leads.push(L); return L.id;
     });
     const t = $("#i-owner").value; if(t) assignItems(ids, t);
-    closeModal(); save(); toast(`${ids.length} leads importados${t?" e atribuídos":""}.`);
+    closeModal(); save(); toast(`${ids.length} leads importados${origLista?` com a origem ${origLista}`:""}${t?" e atribuídos":""}.`);
   };
 }
 /* ---------- Exclusão de leads (gestão e líderes) ---------- */
@@ -2396,7 +2399,7 @@ function confirmAddRow(row){
   saveDB();
   const label = kind==="orig" ? `${name} (${origModo(name)})` : name;
   document.querySelectorAll(`select[data-list="${kind}"]`).forEach(sel=>{
-    const o = document.createElement("option"); o.value = name; o.textContent = (sel.id==="n-orig"||sel.id==="d-orig") ? label : name; sel.appendChild(o);
+    const o = document.createElement("option"); o.value = name; o.textContent = (sel.id==="n-orig"||sel.id==="d-orig"||sel.id==="i-orig") ? label : name; sel.appendChild(o);
   });
   const target = row.dataset.target ? document.getElementById(row.dataset.target) : null;
   row.remove();
