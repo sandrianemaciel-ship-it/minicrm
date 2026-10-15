@@ -8,7 +8,7 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const admin = require("firebase-admin");
-const { fetchTable, fetchPedidos, discoverApp, discoverTestes } = require("./qlik");
+const { fetchTable, fetchPedidos, discoverApp, discoverTestes, discoverTestes2 } = require("./qlik");
 const { mapaDePessoas, mapClientes, syncClientes, syncPessoas, isoLocal, hoje } = require("./hub");
 const R = require("./risco");
 const ORGANOGRAMA = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "config", "organograma.json"), "utf8")).pessoas;
@@ -92,7 +92,7 @@ async function lerPedidos(cfg){
 
 async function main(){
   const cfg = config();
-  if(RECONHECER){ await discoverTestes(cfg.qlik, log); return; }
+  if(RECONHECER){ await discoverTestes2(cfg.qlik, log); return; }
   log(DRY ? "Simulação: nada será gravado." : "Sincronização iniciada.");
   const db = DRY && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON && !fs.existsSync(path.resolve(cfg.serviceAccount)) ? null : firestore(cfg);
   try{

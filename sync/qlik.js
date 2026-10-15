@@ -365,6 +365,58 @@ async function discoverTestes(cfg, log = console.log){
   }
 }
 
+// Reconhecimento 2: detalhes para metas, potenciais e Pasta Mestre (só leitura).
+async function discoverTestes2(cfg, log = console.log){
+  const log0 = log; log = (...x) => log0(x.join(" ").replace(/[{}]/g, c => c === "{" ? "«" : "»")); // chaves viram *** no log do GitHub
+  const cubo = async (app, dims, meas, h = 400, extra = {}) => {
+    const o = await app.createSessionObject({ qInfo: { qType: "recon" }, qHyperCubeDef: Object.assign({
+      qDimensions: dims.map(d => ({ qDef: { qFieldDefs: [d] }, qNullSuppression: true })),
+      qMeasures: meas.map(m => ({ qDef: { qDef: m } })), qSuppressZero: true,
+      qInitialDataFetch: [{ qTop: 0, qLeft: 0, qWidth: dims.length + meas.length, qHeight: h }] }, extra) });
+    const l = await o.getLayout();
+    return { n: l.qHyperCube.qSize.qcy, rows: (l.qHyperCube.qDataPages[0] || { qMatrix: [] }).qMatrix.map(r => r.map(c => c.qText)) };
+  };
+  const tenta = async (rot, fn) => { try{ await fn(); }catch(e){ log(`!! ${rot}: ${e.message}`); } };
+  await withApp(cfg, async (app) => {
+    log("=== Vendas Dellamed SAP ===");
+    const vars = (await (await app.createSessionObject({ qInfo: { qType: "VariableList" }, qVariableListDef: { qType: "variable", qData: { tags: "/tags" } } })).getLayout()).qVariableList.qItems;
+    for(const v of vars.filter(v => /meta|pot|defic|rep|time|linha/i.test(v.qName))){
+      await tenta(v.qName, async () => { const vv = await app.getVariableByName(v.qName); const p = await vv.getProperties(); log(`  var ${v.qName} = ${String(p.qDefinition).slice(0, 600)}`); });
+    }
+    const fields = (await (await app.createSessionObject({ qInfo: { qType: "FieldList" }, qFieldListDef: { qShowSystem: false } })).getLayout()).qFieldList.qItems.map(f => f.qName);
+    log("Todos os campos: " + fields.join(" | "));
+    for(const id of ["36316bd0-43d7-4d76-994e-4f149f508ce3", "e41f3daf-69a1-43e1-9cc2-ffde33f125db", "QJaRvA", "dYze", "bbNWB", "eJjqu"]){
+      await tenta(id, async () => { const o = await app.getObject(id); const p = await o.getProperties(); log(`  obj ${id}: ${JSON.stringify(p).slice(0, 6000)}`); });
+    }
+    for(const f of ["LINHA_ITEM", "TipoRepIE", "TIPO_REP", "COD_TIPO_REP"]){
+      await tenta(f, async () => { const r = await cubo(app, [f], [], 60); log(`  valores ${f}: ${r.rows.map(x => x[0]).join(" | ")}`); });
+    }
+    const metaExpr = (sel) => `sum({<Ano={2026},Mês={'out'}${sel}>} Valor_Meta)`;
+    await tenta("metas", async () => {
+      const r = await cubo(app, ["Time", "REPRESENTANTE"], [
+        `if($(vMetaComercialBudget)='1',sum({<Ano={2026},Mês={'out'}>} Valor_Meta),sum({<Ano={2026},Mês={'out'}>} Valor_Meta_Budget))`,
+        `sum({<Ano={2026},Mês={'out'},COD_TIPO_REP-={'Z2'}>} VL_TOTAL)`,
+        `sum({<Ano={2026},Mês={'out'},COD_TIPO_REP-={'Z2'},LINHA_ITEM={'ORTHO'}>} VL_TOTAL)`,
+        metaExpr(""), `sum({<Ano={2026},Mês={'out'}>} Valor_Meta_Budget)`], 400);
+      log(`Metas out/2026 (${r.n} linhas): Time | Rep | Meta Comercial | Vendido | Vendido Ortho | Valor_Meta | Budget`);
+      r.rows.forEach(x => log("   " + x.join(" | ")));
+    });
+  });
+  await withApp(Object.assign({}, cfg, { appId: "3ac230ee-8b32-46e1-8314-dad53a6b2bc4" }), async (app) => {
+    log("=== Pasta Mestre ===");
+    const fields = (await (await app.createSessionObject({ qInfo: { qType: "FieldList" }, qFieldListDef: { qShowSystem: false } })).getLayout()).qFieldList.qItems.map(f => f.qName);
+    log("Todos os campos: " + fields.join(" | "));
+    for(const id of ["KvvRgGv", "df7f8486-a495-4cb7-8099-7de9af1ff816", "b0b9ee53-dff2-4014-a7b6-94896b67b950", "8354b638-deab-4705-b0a7-ea9faf83a6b6", "23a3f882-5e36-4354-8ce1-f01a8d83659b", "1ba54577-09c6-4588-ab12-26b27190aa2a", "9b319300-df67-42a0-b877-94550aebcbfc"]){
+      await tenta(id, async () => { const o = await app.getObject(id); const p = await o.getProperties(); log(`  obj ${id}: ${JSON.stringify(p).slice(0, 2500)}`); });
+    }
+    for(const f of ["LINHA_ITEM", "Situação Financeira"]){
+      await tenta(f, async () => { const r = await cubo(app, [f], [], 40); log(`  valores ${f}: ${r.rows.map(x => x[0]).join(" | ")}`); });
+    }
+    const cli = fields.filter(f => /client|cod_cli|bp|cnpj|grupo de cliente|codgrupo/i.test(f));
+    for(const f of cli){ await tenta(f, async () => { const r = await cubo(app, [f], [], 5); log(`  amostra ${f} (${r.n}): ${r.rows.map(x => x[0]).join(" | ")}`); }); }
+  });
+}
+
 function explainSocketError(err, d, url){
   const parts = [`Não foi possível conectar ao Qlik (${url}).`];
   if(d.http) parts.push(`Resposta HTTP ${d.http}.`);
@@ -381,4 +433,4 @@ function explainSocketError(err, d, url){
   return parts.join(" ");
 }
 
-module.exports = { fetchTable, fetchPedidos, isoToSerial, withApp, discoverApp, discoverTestes, buildSocketUrl, cellValue, readAllPages, orderedHeaders };
+module.exports = { fetchTable, fetchPedidos, isoToSerial, withApp, discoverApp, discoverTestes, discoverTestes2, buildSocketUrl, cellValue, readAllPages, orderedHeaders };
