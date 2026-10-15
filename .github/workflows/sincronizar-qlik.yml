@@ -20,6 +20,10 @@ on:
         description: "Refazer hoje a análise de clientes (potencial/deficitário, mix sugerido)"
         type: boolean
         default: false
+      pacotes:
+        description: "Remontar agora os pacotes da carteira (normalmente uma vez por dia)"
+        type: boolean
+        default: false
       reconhecer:
         description: "Só reconhecimento: lista pastas, objetos e campos do app do Qlik"
         type: boolean
@@ -42,7 +46,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Sincronizar
-        run: node sync/index.js ${{ inputs.simular && '--dry-run' || '' }} ${{ inputs.reconhecer && '--reconhecer' || '' }} ${{ inputs.analisar && '--analisar' || '' }}
+        run: node sync/index.js ${{ inputs.simular && '--dry-run' || '' }} ${{ inputs.reconhecer && '--reconhecer' || '' }} ${{ inputs.analisar && '--analisar' || '' }} ${{ inputs.pacotes && '--pacotes' || '' }}
         env:
           TZ: America/Sao_Paulo
           QLIK_HOST: ${{ secrets.QLIK_HOST }}
