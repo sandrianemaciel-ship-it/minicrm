@@ -39,7 +39,7 @@ const dia = n => `${mk}-${String(n).padStart(2, "0")}`;
   assert.strictEqual(b2.set.size, 4);
 
   // Sincronização: o cliente 5 comprou (data de inativação mudou), mas continua em "inativam no mês" até o fechamento.
-  const pedidos = { mes: new Map([["5", 900]]), ant: new Map(), tri: new Map(), mesLista: new Map([["5", [{ pedido: "P9", valor: 900, data: dia(2) }]]]) };
+  const pedidos = { mes: new Map([["5", 900]]), ant: new Map(), ano: new Map(), nAno: new Map(), mesLista: new Map([["5", [{ pedido: "P9", valor: 900, data: dia(2) }]]]) };
   await syncClientes(db, clientes, { log, pedidos, base: set, mk });
   const c5 = db.store.get("hub_clientes/5");
   assert.strictEqual(c5.pipe, "risco"); assert.strictEqual(c5.mesRisco, mk); assert.strictEqual(c5.pedidoId.valor, 900); assert.strictEqual(c5.codGrupo, "G5");

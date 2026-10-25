@@ -190,7 +190,10 @@ async function syncClientes(db, clientes, { dry, log, pedidos, base, mk }){
     qlik.pipe = pipe;
     if(pedidos){
       qlik.pedMes = Math.round(pedidos.mes.get(c.cod) || 0); qlik.pedMesAnt = Math.round(pedidos.ant.get(c.cod) || 0);
-      if(pedidos.tri) qlik.ticket = Math.round((pedidos.tri.get(c.cod) || 0) / 3); // média mensal dos 3 meses fechados
+      if(pedidos.ano){ // ticket médio = média mensal dos pedidos dos últimos 12 meses corridos
+        qlik.ped12 = Math.round(pedidos.ano.get(c.cod) || 0); qlik.nPed12 = (pedidos.nAno && pedidos.nAno.get(c.cod)) || 0;
+        qlik.ticket = Math.round(qlik.ped12 / 12);
+      }
       if(pedidos.mesLista) qlik.pedidoId = pipe === "risco" ? pedidoInfo(pedidos.mesLista.get(c.cod)) : null;
     }
     if(pipe === "risco" && mk) qlik.mesRisco = mk;

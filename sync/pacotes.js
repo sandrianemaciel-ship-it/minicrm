@@ -58,7 +58,8 @@ async function montarPacotes(db, { dry, log = console.log, analises = null, forc
   const atual = await ref.get(); const ant = atual.exists ? atual.data() : {};
   if(!forcar && !analises && ant.dia === dia) return null;
   // Marca d'água: tudo gravado depois deste instante (com folga para diferença de relógio) a página busca separado.
-  const builtAt = Date.now() - 3 * 60 * 1000;
+  // (o próprio robô grava antes de ler; 20 s cobrem a diferença de relógio com o servidor)
+  const builtAt = Date.now() - 20 * 1000;
   const snap = await db.collection("hub_clientes").get();
   const { docs, indice, anIndice } = montar(snap.docs.map(d => ({ id: d.id, data: d.data() })), analises);
   const usaAnAntigo = !analises && ant.anIndice;

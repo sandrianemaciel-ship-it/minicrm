@@ -86,10 +86,12 @@ async function lerPedidos(cfg){
   const listaMes = await fetchPedidos(q, isoLocal(iniMes), isoLocal(hj), log);
   const mes = soma(listaMes);
   const ant = soma(await fetchPedidos(q, isoLocal(iniAnt), isoLocal(fimAnt), log));
-  // Ticket médio: valor dos pedidos dos 3 meses fechados ÷ 3 ("Valor Total de Pedidos (- Canc)": cancelamentos já descontados).
-  const iniTri = new Date(hj.getFullYear(), hj.getMonth() - 3, 1);
-  const tri = soma(await fetchPedidos(q, isoLocal(iniTri), isoLocal(fimAnt), log));
-  return { mes, ant, tri, mesLista: agrupa(listaMes) };
+  // Ticket médio: pedidos dos últimos 12 meses corridos (de hoje menos 12 meses + 1 dia até hoje) ÷ 12
+  // ("Valor Total de Pedidos (- Canc)": cancelamentos já descontados). Também guarda o total e o nº de pedidos.
+  const ini12 = new Date(hj.getFullYear() - 1, hj.getMonth(), hj.getDate() + 1);
+  const lista12 = await fetchPedidos(q, isoLocal(ini12), isoLocal(hj), log);
+  const ano = soma(lista12); const nAno = new Map(); lista12.forEach(p => nAno.set(p.cod, (nAno.get(p.cod) || 0) + 1));
+  return { mes, ant, ano, nAno, mesLista: agrupa(listaMes) };
 }
 
 async function main(){
