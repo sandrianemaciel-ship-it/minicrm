@@ -1348,8 +1348,11 @@ function gerAgg(lista, G){
     a.headroom += Math.max(0, n.pico - n.ref);
     const p = analiseDe(c) && analiseDe(c).pot; if(p && G.met==="ped" && p.v25>p.v26){ const fim = String(p.per||"").split("-")[1]; const meses = (fim && MONTHS.findIndex(m=>m.startsWith(fim))+1) || 9; a.retomada += (p.v25-p.v26)/meses; }
   }
-  a.ticketCli = a.compr ? a.ref/a.compr : 0;  // por cliente comprador no mês
-  a.ticketPed = a.np ? a.ref/a.np : 0;         // por pedido
+  // Ticket médio: últimos 12 meses corridos (robô do Qlik). Por cliente = média mensal dos pedidos ÷ 12, só de quem comprou no período;
+  // por pedido = total dos 12 meses ÷ nº de pedidos. Sem esses campos (robô antigo), cai para o período de referência.
+  const c12 = lista.filter(c=>c.ped12>0);
+  if(c12.length){ const tot = c12.reduce((s,c)=>s+c.ped12,0), np = c12.reduce((s,c)=>s+(c.nPed12||0),0); a.ticketCli = tot/12/c12.length; a.ticketPed = np ? tot/np : 0; a.ticket12 = true; a.compr12 = c12.length; }
+  else { a.ticketCli = a.compr ? a.ref/a.compr : 0; a.ticketPed = a.np ? a.ref/a.np : 0; }
   return a;
 }
 function metaQlikDe(vendIds){ const M = metasMes(); if(!M) return null; let t = 0, ok = false; vendIds.forEach(id=>{ const m = M.porPessoa && M.porPessoa[id]; if(m && m.meta>0){ t += m.meta; ok = true; } }); return ok ? t : null; }
@@ -1459,7 +1462,7 @@ function renderGerencial(){
       ${gerTile("Reativados no mês", nInt(A.reat), `${nInt(A.novos)} clientes novos (1º faturamento) no mês`)}
       ${gerTile(`Média mensal de ${L}`, money(A.ref), `${nInt(A.np)} pedidos/mês`)}
       ${gerTile("Média por vendedor", money(A.vends.size?A.ref/A.vends.size:0), `${A.vends.size} vendedores`)}
-      ${gerTile("Ticket médio", money(A.ticketCli), `por cliente comprador · ${money(A.ticketPed)} por pedido`)}
+      ${gerTile("Ticket médio (12 meses)", money(A.ticketCli), A.ticket12 ? `por cliente/mês (${nInt(A.compr12)} compradores) · ${money(A.ticketPed)} por pedido` : `por cliente comprador · ${money(A.ticketPed)} por pedido`)}
       ${gerTile("Potencial de crescimento", money(A.headroom), `voltar ao melhor mês de cada cliente${A.retomada?` · retomar 2025: ${money(A.retomada)}/mês`:""}`)}
     </div>
     <div class="table-wrap"><table class="ger-tab"><thead><tr><th>Líder / time</th><th class="r">Vendedores</th><th class="r">Clientes</th><th class="r">Ativos</th><th class="r">Inativos</th><th class="r">Reativados</th><th class="r">Média mensal</th><th class="r">Média/vendedor</th><th class="r">Pedidos/mês</th><th class="r">Ticket/cliente</th><th class="r">Realizado mês</th><th class="r">Potencial</th></tr></thead><tbody>
@@ -1474,7 +1477,7 @@ function renderGerencial(){
   const clientesOrd = lista.map(c=>({c, n:gerNum(c,G)})).filter(x=>x.n.ok && x.n.ref>0).sort((a,b)=>b.n.ref-a.n.ref);
   h += `<section class="panel ger-sec"><h2>2. Simulador de crescimento</h2>
     <div class="ger-form"><label><span>Crescimento desejado da carteira (%)</span>${gerInput("g", G.g, 'step="0.5"')}</label>
-      <div class="ger-res"><div><small>Base (${refLbl})</small><b>${money(A.ref)}</b></div><div><small>Projetado</small><b>${money(projG)}</b></div><div><small>Valor adicional</small><b class="ok">+${money(projG-A.ref)}</b></div><div><small>Ticket por cliente comprador</small><b>${money(A.ticketCli)} → ${money(A.compr?projG/A.compr:0)}</b></div></div></div>
+      <div class="ger-res"><div><small>Base (${refLbl})</small><b>${money(A.ref)}</b></div><div><small>Projetado</small><b>${money(projG)}</b></div><div><small>Valor adicional</small><b class="ok">+${money(projG-A.ref)}</b></div><div><small>Ticket por cliente comprador (12 meses)</small><b>${money(A.ticketCli)} → ${money(A.ticketCli*(A.ref?projG/A.ref:1))}</b></div></div></div>
     <div class="table-wrap"><table class="ger-tab"><thead><tr><th>Vendedor</th><th>Time</th><th class="r">Base</th><th class="r">% simulado</th><th class="r">Projetado</th><th class="r">Adicional</th><th class="r">Meta Qlik</th><th class="r">Projetado/meta</th></tr></thead><tbody>
     ${Array.from(porVend).map(([v,cs])=>{ let b=0,p=0; cs.forEach(c=>{ const n=gerNum(c,G); if(n.ok){ b+=n.ref; p+=n.ref*(1+gDe(c)/100); } }); const mq = metaQlikDe([v]); return {v,b,p,mq}; }).sort((a,b)=>b.b-a.b).map(r=>`<tr><td><b>${esc(nameOf(r.v))}</b></td><td>${esc((person(r.v)||{}).time||"")}</td><td class="r">${money(r.b)}</td><td class="r">${gerInput("gVend:"+r.v, G.gVend[r.v]!=null?G.gVend[r.v]:"", `placeholder="${G.g}" step="0.5"`)}</td><td class="r"><b>${money(r.p)}</b></td><td class="r">+${money(r.p-r.b)}</td><td class="r">${r.mq?money(r.mq):"—"}</td><td class="r">${r.mq?pctTxt(r.p/r.mq):"—"}</td></tr>`).join("")}
     </tbody></table></div>
@@ -2265,7 +2268,7 @@ function openDetail(id){
   }else{
     const segM = SEG_M[it.seg];
     kv = [["Código",it.cod],["CNPJ",it.cnpj],["Cidade/UF",it.cid+"/"+it.uf],["Segmento",it.seg+(segM?` · ${segM} meses`:"")],["Vendedor",nameOf(it.vend)],["Time",(person(it.vend)||{}).time||"—"],
-      ["Cadastro",fd(it.dtCad)],["Último faturamento",fd(it.dtUltFat)],["Data inativação",fd(it.dtInat)],["Dias sem comprar", days(TODAY,pd(it.dtUltFat))],["Ticket médio",money(it.ticket)],["Pedido no período", it.valor?money(it.valor):"—"]];
+      ["Cadastro",fd(it.dtCad)],["Último faturamento",fd(it.dtUltFat)],["Data inativação",fd(it.dtInat)],["Dias sem comprar", days(TODAY,pd(it.dtUltFat))],["Ticket médio (12 meses)",money(it.ticket)],["Pedido no período", it.valor?money(it.valor):"—"]];
   }
   const kvH = `<div class="kv">${kv.map(([k,v])=>`<div><small>${k}</small><span>${esc(v)}</span></div>`).join("")}</div>`;
   const steps = `<div class="fld"><span>Etapa</span><div class="stage-steps">${P.stages.map(s=>`<button type="button" data-move="${s.k}" class="${s.k===it.stage?"cur":""}" style="${s.k===it.stage?`background:${s.color}`:""}"${ed?"":" disabled"}>${s.label}</button>`).join("")}</div></div>`;
