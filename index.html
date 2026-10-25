@@ -195,7 +195,7 @@ td input[type=checkbox], th input[type=checkbox]{accent-color:var(--accent); wid
 .an-wrap{display:flex; flex-direction:column; gap:10px; margin:8px 0 14px;} .an-yoy{display:flex; gap:18px; align-items:center; flex-wrap:wrap; background:var(--surface-2); border-radius:10px; padding:10px 12px;} .an-yoy small{display:block; color:var(--ink-faint); font-size:11px;} .an-yoy b{font-variant-numeric:tabular-nums;}
 .an-wrap .ok{color:var(--good);} .an-wrap .neg{color:var(--bad);} .an-fin{display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px;} .an-t{font-weight:600; font-size:13px;} .an-t small{font-weight:400; color:var(--ink-faint);} .an-tab td,.an-tab th{font-size:12px;} .an-tab .r{text-align:right;} .an-cross{margin:0; padding-left:18px; font-size:12.5px; display:flex; flex-direction:column; gap:4px;}
 .ger-filtros{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:flex-end; margin-bottom:12px;} .ger-filtros label{display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; font-weight:600; min-width:170px; flex:1 1 170px;} .ger-filtros select{text-transform:none; letter-spacing:0; font-weight:400;}
-.ger-kpis{grid-template-columns:repeat(4,1fr); margin-bottom:8px;} @media (max-width:860px){ .ger-kpis{grid-template-columns:repeat(2,1fr);} }
+.kpi2-grid.ger-kpis{grid-template-columns:repeat(4,1fr); margin-bottom:8px;} @media (max-width:860px){ .kpi2-grid.ger-kpis{grid-template-columns:repeat(2,1fr);} }
 .ger-tile{cursor:default;} .ger-tile:hover{background:var(--surface);} .ger-tile.hl .v{color:var(--accent);}
 .ger-avisos{display:flex; flex-direction:column; gap:2px; font-size:11.5px; color:var(--ink-dim); margin:0 0 14px;}
 .ger-sec{margin-bottom:14px; display:flex; flex-direction:column; gap:12px;} .ger-sec h2{margin:0; font-size:16px;} .ger-sec h2 small{font-weight:400; color:var(--ink-faint); font-size:12px; margin-left:6px;}
@@ -211,6 +211,22 @@ td input[type=checkbox], th input[type=checkbox]{accent-color:var(--accent); wid
 .ger-cen-c{background:var(--surface-2); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px;} .ger-cen-c h3{margin:0; font-size:14px;} .ger-cen-c label{display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px;} .ger-cen-c .ger-in{max-width:100px; text-align:right;}
 .ger-cen-v small{display:block; font-size:11px; color:var(--ink-faint);} .ger-cen-v b{font-size:20px; font-variant-numeric:tabular-nums;} .ger-cen-v span{font-size:11.5px; color:var(--ink-dim);}
 .ger-cen-c ul{margin:0; padding-left:16px; font-size:12px; color:var(--ink-dim);} .ger-cen-d{font-size:12.5px; font-weight:600;}
+.kpi2-grid.sug-kpis{grid-template-columns:repeat(4,1fr); margin-bottom:14px;} @media (max-width:860px){ .kpi2-grid.sug-kpis{grid-template-columns:repeat(2,1fr);} }
+.sug-list{list-style:none; margin:0 0 12px; padding:0; display:flex; flex-direction:column; gap:10px;}
+.sug{display:flex; gap:14px; align-items:flex-start;} .sug-n{flex:none; width:30px; height:30px; border-radius:50%; background:var(--accent-soft); color:var(--accent); font-weight:700; display:flex; align-items:center; justify-content:center; font-variant-numeric:tabular-nums;}
+.sug-b{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px;} .sug-h{display:flex; justify-content:space-between; gap:10px; align-items:baseline; flex-wrap:wrap;} .sug-h h3{margin:0; font-size:15px;}
+.sug-v{text-align:right;} .sug-v b{font-variant-numeric:tabular-nums;} .sug-v small{display:block; font-size:10.5px; color:var(--ink-faint);}
+.sug-p{margin:0; font-size:13px; color:var(--ink-dim);} .sug-a{margin:0; font-size:13px;}
+.sug-cli{display:flex; flex-wrap:wrap; gap:6px; align-items:center;} .sug-c{border:1px solid var(--border); background:var(--surface-2); color:var(--ink); border-radius:8px; padding:5px 8px; text-align:left; cursor:pointer; font:inherit; max-width:240px;} .sug-c:hover{border-color:var(--accent);}
+.sug-c b{display:block; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;} .sug-c small{font-size:11px; color:var(--ink-faint);} .sug-mais{font-size:12px; color:var(--ink-faint);}
+.sug-cob small{font-size:11px; color:var(--ink-faint);}
+.ativ-h{display:flex; justify-content:space-between; align-items:baseline;} .ativ-h span{font-size:12.5px; color:var(--ink-dim);}
+.ativ-list{list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:4px;}
+.ativ-list button{width:100%; display:flex; align-items:center; gap:10px; background:none; border:1px solid var(--border); border-radius:9px; padding:7px 10px; cursor:pointer; color:var(--ink); font:inherit; text-align:left;} .ativ-list button:hover{border-color:var(--accent);}
+.ativ-ck{width:18px; height:18px; border-radius:5px; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; flex:none;}
+.ativ-list li.ok .ativ-ck{background:var(--good); border-color:var(--good); color:#fff;} .ativ-list li.ok b{text-decoration:line-through; color:var(--ink-faint);}
+.ativ-t{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;} .ativ-t b{font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;} .ativ-t small{align-self:flex-start;}
+.ativ-x{font-size:11.5px; color:var(--accent);} .ativ-list li.ok .ativ-x{color:var(--good);}
 .selall-top{display:flex; align-items:center; gap:12px; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin:0 0 10px; font-size:13px;}
 .selall-top label{display:flex; align-items:center; gap:8px; cursor:pointer;}
 .selall-top span{color:var(--ink-dim);}
@@ -1115,18 +1131,19 @@ const ICONS = {
   carteira:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12.5h18"/>',
   agenda:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
   equipe:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>',
+  sugestoes:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
   gerencial:'<path d="M3 20h18"/><path d="M6 16v-5M11 16V8M16 16v-3M21 4l-5 5-4-3-6 6"/>',
   money:'<path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v7H2v-7z"/>'
 };
 const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]||""}</svg>`;
-const VIEW_LABEL = {carteira:"Carteira de clientes",painel:"Dashboard",agenda:"Gestão de contatos",ativos:"Clientes ativos",risco:"Inativam no mês",inativos:"Clientes inativos",prospeccao:"Pipeline de prospecção",distribuicao:"Distribuição de leads",equipe:"Equipe e conversão",gerencial:"Visão gerencial"};
+const VIEW_LABEL = {carteira:"Carteira de clientes",painel:"Dashboard",agenda:"Gestão de contatos",ativos:"Clientes ativos",risco:"Inativam no mês",inativos:"Clientes inativos",prospeccao:"Pipeline de prospecção",distribuicao:"Distribuição de leads",equipe:"Equipe e conversão",gerencial:"Visão gerencial",sugestoes:"Sugestões do dia"};
 function allowedViews(){
   const r = viewerRole();
-  if(r==="sdr") return ["painel","agenda","prospeccao","equipe"];
-  if(r==="vendedor") return ["painel","agenda","carteira","prospeccao","equipe"].concat(podeGerencial()?["gerencial"]:[]);
-  return ["painel","agenda","carteira","prospeccao","distribuicao","equipe","gerencial"];
+  if(r==="sdr") return ["painel","agenda","sugestoes","prospeccao","equipe"];
+  if(r==="vendedor") return ["painel","agenda","carteira","sugestoes","prospeccao","equipe"].concat(podeGerencial()?["gerencial"]:[]);
+  return ["painel","agenda","carteira","sugestoes","prospeccao","distribuicao","equipe","gerencial"];
 }
 // "Carteira de clientes" reúne as três pipelines do vendedor numa pasta só, com uma aba para cada uma.
 const CARTEIRA_TABS = ["risco","ativos","inativos"];
@@ -1160,6 +1177,7 @@ function renderNav(){
     h += `<div class="nav-group">Carteira</div>`;
     h += `<button class="nav-item${on?" active":""}" data-view="carteira" type="button">${svg("carteira")}<span>Carteira de clientes</span><span class="cnt">${tot}</span></button>`;
   }
+  h += item("sugestoes");
   h += `<div class="nav-group">Captação</div>`;
   h += item("prospeccao", `<span class="cnt">${cnt("prospeccao")}</span>`);
   h += item("distribuicao", semDono? `<span class="cnt alert">${semDono}</span>`:"");
@@ -1187,6 +1205,7 @@ function render(){
   if(S.view==="painel") h += renderPainel();
   else if(S.view==="equipe") h += renderEquipe();
   else if(S.view==="gerencial") h += renderGerencial();
+  else if(S.view==="sugestoes") h += renderSugestoes();
   else if(S.view==="agenda") h += renderAgenda();
   else if(S.view==="distribuicao") h += renderDistribuicao();
   else h += renderPipe(S.view);
@@ -1559,6 +1578,132 @@ function gerChange(el){
   else if(k==="meta"||k==="tNovo"||k==="tReat"){ G[k] = v==null ? null : Math.max(0, v); }
   else G[k] = v==null ? 0 : v;
   render();
+}
+
+/* ======================= SUGESTÕES DO DIA =======================
+   Analisa a carteira (e os leads) de quem está vendo e monta até 15 sugestões para chegar à meta do dia.
+   Cada cliente entra em uma só sugestão (a de maior prioridade), para o potencial não ser contado duas vezes.
+   "Potencial estimado" = valor de referência do cliente × chance de virar pedido hoje (regra de cada sugestão).
+   Nada aqui grava no banco. */
+const SUG_PROB = { risco:.35, atrasado:.30, hoje:.40, mesAnt:.35, proposta:.50, potencial:.30, mix:.30, ortho:.30, cross:.25, topTicket:.25, semContato:.20, financeiro:.20, reativar:.15, leadQuente:.20, leadNovo:.10, limite:.20 };
+function sugEscopo(){
+  const G = S.sug || (S.sug = { vend:"" });
+  const vis = DB.clients.filter(c=> c.vend && podeVer(c.vend) && (!G.vend || c.vend===G.vend));
+  const leads = DB.leads.filter(l=> podeVer(l.owner) && (!G.vend || l.owner===G.vend));
+  return { G, clientes: vis, leads };
+}
+function metaDiaDe(ids){
+  const M = metasMes(); if(!M || !M.porPessoa) return null;
+  const du = diasUteisRest(TODAY); let dia = 0, diaO = 0, ok = false;
+  ids.forEach(id=>{ const m = M.porPessoa[id]; if(m && m.meta>0){ const c = contaMeta(m, du); dia += c.dia; diaO += c.diaO; ok = true; } });
+  return ok ? { dia, diaO, du } : null;
+}
+const contatoHoje = it => { const t = iso(TODAY); return it.dtUltContato===t || (it.crm||[]).some(x=>String(x.d||"").slice(0,10)===t); };
+function sugestoesDoDia(clientes, leads, meta){
+  const hoje = iso(TODAY); const usados = new Set(); const out = [];
+  const aberto = it => !stageOf(pkOfItem(it), it.stage).end;
+  const tk = c => Number(c.ticket)||0;
+  const an = c => analiseDe(c) || {};
+  const nome = it => it.cli || it.empresa;
+  // regra: [id, título, porquê(n), ação(lista), candidatos (já ordenados), valor(c)]
+  const regra = (id, titulo, porque, acao, cand, valor) => {
+    const lista = cand.filter(c=>!usados.has(c.id) && !contatoHoje(c));
+    if(!lista.length) return;
+    const top = lista.slice(0,8); top.forEach(c=>usados.add(c.id));
+    const est = top.reduce((a,c)=>a+Math.max(0, valor(c))*SUG_PROB[id], 0);
+    out.push({ id, titulo, porque: porque(lista), acao: typeof acao==="function" ? acao(top) : acao, itens: top, total: lista.length, est, valor });
+  };
+  const cl = clientes.filter(aberto);
+  const pedMes = c => (c.pedMes>0) || !!c.pedidoId;
+  regra("hoje", "Faça os contatos agendados para hoje", l=>`${l.length} ${l.length===1?"contato marcado":"contatos marcados"} para hoje.`, "Ligue no horário combinado e registre o resultado no CRM.",
+    cl.concat(leads.filter(aberto)).filter(i=>i.prox===hoje).sort((a,b)=>(a.horaProx||"99").localeCompare(b.horaProx||"99")), c=>tk(c)||c.potencial||0);
+  regra("risco", "Recupere quem inativa primeiro", l=>`${l.length} clientes inativam neste mês sem pedido identificado. Os primeiros da lista inativam antes.`, "Ligue hoje, ofereça o mix que ele já comprava e registre o ofensor se não houver pedido.",
+    cl.filter(c=>c.pipe==="risco" && !c.pedidoId).sort((a,b)=>String(a.dtInat).localeCompare(String(b.dtInat))), tk);
+  regra("proposta", "Feche as propostas em aberto", l=>`${l.length} clientes com proposta enviada ou em negociação.`, "Retome a proposta, confirme condição e prazo e peça o pedido hoje.",
+    cl.concat(leads.filter(aberto)).filter(i=>["proposta","negociando","qualificado"].includes(i.stage)).sort((a,b)=>(b.valorProposta||tk(b)||b.potencial||0)-(a.valorProposta||tk(a)||a.potencial||0)), c=>c.valorProposta||tk(c)||c.potencial||0);
+  regra("atrasado", "Coloque em dia os contatos atrasados", l=>`${l.length} contatos passaram da data combinada.`, "Ligue primeiro para os de maior ticket e reagende quem não atender.",
+    cl.concat(leads.filter(aberto)).filter(i=>i.prox && i.prox<hoje).sort((a,b)=>(tk(b)||b.potencial||0)-(tk(a)||a.potencial||0)), c=>tk(c)||c.potencial||0);
+  regra("mesAnt", "Repita o pedido de quem comprou mês passado", l=>`${l.length} clientes compraram no mês passado e ainda não pediram neste.`, "Proponha a reposição do último pedido.",
+    cl.filter(c=>c.pipe!=="inativo" && c.pedMesAnt>0 && !pedMes(c)).sort((a,b)=>b.pedMesAnt-a.pedMesAnt), c=>c.pedMesAnt);
+  regra("mix", "Ofereça os itens que o cliente deixou de comprar", l=>`${l.length} clientes compraram menos este ano do que em 2025 (mix sugerido no cartão).`,
+    top=>"Comece por: "+top.slice(0,3).map(c=>{ const m = (an(c).mix||[])[0]; return `${nome(c)} → ${m.item}${m.pu?` (últ. ${money2(m.pu)})`:""}`; }).join(" · "),
+    cl.filter(c=>(an(c).mix||[]).length && !pedMes(c)).sort((a,b)=>(an(b).mix[0].gap||0)-(an(a).mix[0].gap||0)), c=>(an(c).mix[0].gap||0)/9);
+  if(meta && meta.diaO>0) regra("ortho", "Puxe a linha Ortho", l=>`Faltam ${money(meta.diaO)} por dia em Ortho. ${l.length} clientes já compraram ou combinam com itens Ortho.`, "Inclua um item Ortho em cada pedido de hoje.",
+    cl.filter(c=>[].concat(an(c).mix||[], an(c).cross||[]).some(x=>/ORTHO/i.test(x.linha||""))).sort((a,b)=>tk(b)-tk(a)), c=>Math.max(tk(c)*.15, 0));
+  regra("potencial", "Amplie o pedido de quem está crescendo", l=>`${l.length} clientes compram mais em 2026 do que em 2025 e ainda não pediram neste mês.`, "Aproveite o bom momento: sugira um volume maior ou uma linha nova.",
+    cl.filter(c=>an(c).pot && an(c).pot.leg==="Potencial" && !pedMes(c)).sort((a,b)=>(an(b).pot.v26||0)-(an(a).pot.v26||0)), tk);
+  regra("cross", "Apresente um item novo que combina com o cliente", l=>`${l.length} clientes têm um item sugerido pelo que clientes parecidos compram.`,
+    top=>"Comece por: "+top.slice(0,3).map(c=>`${nome(c)} → ${(an(c).cross||[])[0].item}`).join(" · "),
+    cl.filter(c=>(an(c).cross||[]).some(x=>x.conf>=.5)).sort((a,b)=>(an(b).cross[0].conf||0)-(an(a).cross[0].conf||0)), c=>tk(c)*.2);
+  regra("topTicket", "Ligue para os maiores clientes sem pedido no mês", l=>`${l.length} clientes ativos sem pedido neste mês; estes têm o maior ticket médio.`, "Confirme estoque e necessidade e ofereça condição para fechar ainda hoje.",
+    cl.filter(c=>c.pipe==="ativo" && !pedMes(c) && tk(c)>0).sort((a,b)=>tk(b)-tk(a)), tk);
+  regra("semContato", "Retome clientes sem contato há mais de 30 dias", l=>`${l.length} clientes ativos sem contato registrado há mais de 30 dias.`, "Um contato rápido de relacionamento evita que eles esfriem.",
+    cl.filter(c=>c.pipe==="ativo" && (!c.dtUltContato || days(TODAY, pd(c.dtUltContato))>30)).sort((a,b)=>tk(b)-tk(a)), tk);
+  regra("financeiro", "Resolva o bloqueio financeiro antes de vender", l=>`${l.length} clientes com situação financeira diferente de Liberado.`, "Acione o financeiro ou peça o pagamento em aberto para liberar o próximo pedido.",
+    cl.filter(c=>{ const f = an(c).fin; return f && f.sit && !/liberado/i.test(f.sit); }).sort((a,b)=>tk(b)-tk(a)), tk);
+  regra("limite", "Renove o limite de crédito que vence logo", l=>`${l.length} clientes com limite vencendo nos próximos 15 dias.`, "Peça a documentação para renovação antes do próximo pedido.",
+    cl.filter(c=>{ const f = an(c).fin; if(!f || !f.venc) return false; const d = days(pd(f.venc), TODAY); return d>=0 && d<=15; }).sort((a,b)=>tk(b)-tk(a)), tk);
+  regra("reativar", "Reative inativos recentes", l=>`${l.length} clientes inativos há 90 a 180 dias que compravam em 2025.`, "Ligue com uma condição de retorno e o mix que eles compravam.",
+    cl.filter(c=>c.pipe==="inativo" && c.dtUltFat && days(TODAY, pd(c.dtUltFat))<=180 && an(c).pot && an(c).pot.v25>0).sort((a,b)=>(an(b).pot.v25||0)-(an(a).pot.v25||0)), c=>(an(c).pot.v25||0)/9);
+  regra("leadQuente", "Avance os leads quentes", l=>`${l.length} leads quentes em aberto.`, "Peça o primeiro pedido ou agende a proposta.",
+    leads.filter(l=>aberto(l) && temperatura(l)==="quente").sort((a,b)=>(b.potencial||0)-(a.potencial||0)), l=>l.potencial||0);
+  regra("leadNovo", "Faça o primeiro contato com leads novos", l=>`${l.length} leads ainda sem contato.`, "Ligue ou mande WhatsApp para qualificar.",
+    leads.filter(l=>aberto(l) && l.stage==="novo").sort((a,b)=>String(b.dtEntrada).localeCompare(String(a.dtEntrada))), l=>l.potencial||0);
+  return out.sort((a,b)=>b.est-a.est).slice(0,15);
+}
+function renderSugestoes(){
+  const { G, clientes, leads } = sugEscopo();
+  const vends = [...new Set(clientes.map(c=>c.vend))];
+  const pessoas = DB.people.filter(p=>p.papel!=="gestor" && podeVer(p.id) && (DB.clients.some(c=>c.vend===p.id) || DB.leads.some(l=>l.owner===p.id))).sort((a,b)=>a.nome.localeCompare(b.nome));
+  let carregando = false;
+  if(S.modoPacotes){ const vs = vends.map(slugVend); if(vs.some(v=>!anCarregado.has(v) && DB.pac && DB.pac.anIndice && DB.pac.anIndice[v])){ carregando = true; garantirAnalise(vs).then(()=>{ if(S.view==="sugestoes") render(); }); } }
+  const ids = G.vend ? [G.vend] : (S.viewer!=="gestor" && !podeGerencial() ? [S.viewer] : vends);
+  const meta = metaDiaDe(ids);
+  const sug = sugestoesDoDia(clientes, leads, meta);
+  const soma = sug.reduce((a,s)=>a+s.est,0);
+  let acum = 0;
+  let h = `<div class="view-head"><div><h1>Sugestões do dia</h1><p>${TODAY.toLocaleDateString("pt-BR",{weekday:"long", day:"2-digit", month:"long"})} · ${esc(G.vend ? nameOf(G.vend) : (S.viewer==="gestor" ? "todas as carteiras" : nameOf(S.viewer)))}. A lista é refeita a cada abertura com os dados da carteira; quem já teve contato registrado hoje sai das sugestões.</p></div>
+    ${pessoas.length>1?`<div class="actions"><select data-sug="vend" aria-label="Carteira">${opt("", S.viewer==="gestor"?"Todas as carteiras":"Meu time", !G.vend)}${pessoas.map(p=>opt(p.id,p.nome,p.id===G.vend)).join("")}</select></div>`:""}</div>`;
+  h += `<div class="kpi2-grid sug-kpis">
+    <div class="kpi2 ger-tile"><span class="k">Meta do dia</span><span class="v num">${meta?money(meta.dia):"—"}</span><span class="s">${meta?`falta do mês ÷ ${meta.du} dias úteis`:"sem meta do Qlik para esta carteira"}</span></div>
+    <div class="kpi2 ger-tile"><span class="k">Potencial das 15 sugestões</span><span class="v num">${money(soma)}</span><span class="s">estimativa: valor do cliente × chance de pedido hoje</span></div>
+    <div class="kpi2 ger-tile hl"><span class="k">Cobertura da meta do dia</span><span class="v num">${meta&&meta.dia?Math.round(soma/meta.dia*100)+"%":"—"}</span><span class="s">${meta&&meta.dia?(soma>=meta.dia?"as sugestões cobrem a meta de hoje":"complemente com prospecção e reativação"):""}</span></div>
+    <div class="kpi2 ger-tile"><span class="k">Ortho por dia</span><span class="v num">${meta?money(meta.diaO):"—"}</span><span class="s">10% da meta comercial</span></div>
+  </div>`;
+  if(carregando) h += `<p class="hint">Carregando a análise comercial (mix e insights) para completar as sugestões…</p>`;
+  if(!sug.length) return h + `<div class="notice"><div><b>Nenhuma sugestão para hoje.</b> Todos os contatos prioritários já foram feitos ou a carteira ainda não foi carregada.</div></div>`;
+  h += `<ol class="sug-list">${sug.map((s,i)=>{ acum += s.est; const cob = meta&&meta.dia ? Math.min(1, acum/meta.dia) : null;
+    return `<li class="sug panel"><div class="sug-n">${i+1}</div><div class="sug-b">
+      <div class="sug-h"><h3>${esc(s.titulo)}</h3><span class="sug-v"><b>${money(s.est)}</b><small>potencial estimado</small></span></div>
+      <p class="sug-p">${esc(s.porque)}</p><p class="sug-a">${esc(s.acao)}</p>
+      <div class="sug-cli">${s.itens.map(c=>`<button type="button" class="sug-c" data-act="contact" data-id="${c.id}"><b>${esc(c.cli||c.empresa)}</b><small>${c.ticket?money(c.ticket)+"/mês":c.potencial?"pot. "+money(c.potencial):(c.cod?"Cód "+esc(c.cod):"lead")}${c.prox?` · ${fdShort(c.prox)}${c.horaProx?" "+c.horaProx:""}`:""}${c.dtInat&&s.id==="risco"?` · inativa ${fdShort(c.dtInat)}`:""}</small></button>`).join("")}${s.total>s.itens.length?`<span class="sug-mais">+${s.total-s.itens.length} na carteira</span>`:""}</div>
+      ${cob!=null?`<div class="sug-cob">${barraMeta(cob)}<small>Até aqui: ${Math.round(acum/meta.dia*100)}% da meta do dia</small></div>`:""}
+    </div></li>`; }).join("")}</ol>`;
+  h += `<p class="hint">Chances usadas: agendados hoje 40%, propostas 50%, inativam no mês 35%, recompra do mês passado 35%, atrasados 30%, mix e crescimento 30%, maiores clientes e item novo 25%, demais 10% a 20%. São estimativas para priorizar, não previsão de venda.</p>`;
+  return h;
+}
+
+/* ---------- Atividades do dia (Gestão de contatos) ----------
+   Junta os contatos marcados para hoje, os atrasados e o primeiro cliente das 5 principais sugestões.
+   Uma atividade fica feita quando o contato é registrado hoje (CRM ou data do último contato). */
+function atividadesDoDia(items){
+  const hoje = iso(TODAY); const lista = []; const vistos = new Set();
+  const add = (it, motivo, cls) => { if(!it || vistos.has(it.id)) return; vistos.add(it.id); lista.push({ it, motivo, cls, feito: contatoHoje(it) }); };
+  items.filter(i=>i.prox===hoje).sort((a,b)=>(a.horaProx||"99").localeCompare(b.horaProx||"99")).forEach(i=>add(i, i.horaProx?`Agendado às ${i.horaProx}`:"Agendado para hoje", "hoje"));
+  items.filter(i=>i.prox && i.prox<hoje).sort((a,b)=>a.prox.localeCompare(b.prox)).slice(0,15).forEach(i=>add(i, `Atrasado desde ${fdShort(i.prox)}`, "atrasada"));
+  if(S.viewer!=="gestor"){
+    const ids = new Set(items.map(i=>i.id));
+    const sug = sugestoesDoDia(DB.clients.filter(c=>ids.has(c.id)), DB.leads.filter(l=>ids.has(l.id)), metaDiaDe([S.viewer]));
+    sug.filter(s=>!["hoje","atrasado"].includes(s.id)).slice(0,5).forEach(s=>add(s.itens[0], "Sugestão: "+s.titulo.toLowerCase(), "sug"));
+  }
+  return lista;
+}
+function atividadesHtml(items){
+  const at = atividadesDoDia(items); if(!at.length) return "";
+  const feitas = at.filter(a=>a.feito).length;
+  return `<div class="panel ag-panel ativ"><div class="ativ-h"><h2>Atividades do dia</h2><span><b>${feitas}</b> de ${at.length} feitas</span></div>${barraMeta(at.length?feitas/at.length:0)}
+    <ul class="ativ-list">${at.map(a=>`<li class="${a.feito?"ok":""}"><button type="button" data-act="contact" data-id="${a.it.id}"><span class="ativ-ck" aria-hidden="true">${a.feito?"✓":""}</span><span class="ativ-t"><b>${esc(a.it.cli||a.it.empresa)}</b><small class="ag-chip ${a.cls==="sug"?"futuro":a.cls}">${esc(a.motivo)}</small></span><span class="ativ-x">${a.feito?"feito":"registrar"}</span></button></li>`).join("")}</ul>
+    <p class="hint">A atividade é marcada como feita quando o contato é registrado hoje no CRM do cliente.</p></div>`;
 }
 
 /* ---------- Pipeline ---------- */
@@ -2659,7 +2804,7 @@ function renderAgenda(){
         ${next?`<button type="button" class="ag-next" data-act="contact" data-id="${next.id}"><small>Próximo contato</small><b>${esc(next.cli||next.empresa)}</b><span>${fdShort(next.prox)}${next.horaProx?" às "+next.horaProx:""} · ${CART[pkOfItem(next)].l}</span></button>`:`<p class="hint">Nenhum contato futuro agendado.</p>`}
         ${semAgenda.length?`<button type="button" class="ag-noag" ${drillAttr("semag","Sem próximo contato agendado",semAgenda)}>${semAgenda.length} em aberto sem próximo contato</button>`:""}</div>
       <div class="panel ag-panel"><h2>Próximos contatos</h2><div class="ag-list">${sorted.filter(i=>i.prox>=today).slice(0,10).map(i=>itemRow(i,true)).join("") || `<p class="hint">Nada agendado.</p>`}</div></div>
-    </aside><div class="ag-main">
+    </aside><div class="ag-main">${atividadesHtml(items)}
       <div class="panel ag-cal"><div class="ag-cal-head"><div class="ag-nav"><button type="button" data-act="agNav" data-v="-1" aria-label="Mês anterior">‹</button><button type="button" data-act="agNav" data-v="0">Hoje</button><button type="button" data-act="agNav" data-v="1" aria-label="Próximo mês">›</button></div><b>${MONTHS[mm].charAt(0).toUpperCase()+MONTHS[mm].slice(1)} de ${yy}</b>
         <span class="ag-leg"><span class="ag-chip atrasada">atrasado</span><span class="ag-chip hoje">hoje</span><span class="ag-chip futuro">agendado</span></span></div>
         <div class="ag-wd"><span>dom</span><span>seg</span><span>ter</span><span>qua</span><span>qui</span><span>sex</span><span>sáb</span></div><div class="ag-grid">${cal}</div></div>
@@ -2963,7 +3108,7 @@ function presetsKey(){ return S.viewer; }
 function myPresets(){ DB.presets = DB.presets || {}; return DB.presets[presetsKey()] || (DB.presets[presetsKey()] = []); }
 function renderGfBar(){
   const g = S.gf; const el = $("#gfbar");
-  if(S.view==="gerencial"){ el.innerHTML = ""; return; } // a Visão gerencial tem filtros próprios
+  if(S.view==="gerencial" || S.view==="sugestoes"){ el.innerHTML = ""; return; } // a Visão gerencial tem filtros próprios
   const chev = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
   if(!mesOptions().includes(g.mes)){ g.mes = CUR_MK; g.dtinat = []; g.periodo = []; }
   const btnTxt = k => {
@@ -3133,6 +3278,7 @@ $("#burger").addEventListener("click", ()=>toggleSide(true));
 $("#scrim").addEventListener("click", ()=>toggleSide(false));
 // Simuladores da Visão gerencial: recalculam ao sair do campo (ou Enter); nada é gravado.
 document.addEventListener("change", e=>{ const el = e.target.closest && e.target.closest("[data-ger]"); if(el && S.view==="gerencial") gerChange(el); });
+document.addEventListener("change", e=>{ const el = e.target.closest && e.target.closest("[data-sug]"); if(el && S.view==="sugestoes"){ (S.sug = S.sug || {})[el.dataset.sug] = el.value; render(); } });
 document.addEventListener("keydown", e=>{ if(e.key==="Enter" && e.target.matches && e.target.matches("input[data-ger]")){ e.preventDefault(); e.target.blur(); } });
 $("#viewAs").addEventListener("change", e=>{ if(!podeVerComo(e.target.value) && !(e.target.value==="gestor" && S.identAcc==="gestor")) return; S.viewer = e.target.value; S.selectMode=false; S.selected.clear(); S.filters={}; closeGfPop(); render(); });
 
