@@ -3184,6 +3184,29 @@ S.gfv = {};
 const gfKey = () => isCarteira(S.view) ? "carteira" : S.view; // as três abas da carteira dividem o mesmo cabeçalho
 Object.defineProperty(S, "gf", { get(){ const k = gfKey(); return S.gfv[k] || (S.gfv[k] = gfEmpty()); }, set(v){ S.gfv[gfKey()] = v; } });
 
+/* ======================= ECONOMIA DE LEITURAS ======================= */
+// Uma aba esquecida aberta (ou um computador que dormiu) não pode "acordar" baixando tudo o que mudou nesse tempo:
+// o Firebase cobra de novo cada cliente alterado. Depois de 5 min escondida, a aba se desconecta; ao voltar, recarrega,
+// usando os pacotes do dia guardados no aparelho (poucas leituras).
+const SONO_MS = 5*60*1000; let ocultaDesde = 0, ultimoPulso = Date.now(), dormindo = false;
+async function adormecer(){
+  if(dormindo || !fdb) return; dormindo = true;
+  try{ await Promise.race([filaGravacao, new Promise(r=>setTimeout(r,5000))]); }catch(_){}
+  try{ await fdb.disableNetwork(); }catch(_){}
+}
+function acordar(){
+  if(!dormindo) return;
+  const modal = $("#overlay"); if(modal && !modal.hidden && modal.innerHTML){ dormindo = false; fdb.enableNetwork().catch(()=>{}); return; } // formulário aberto: não perde o que foi digitado
+  location.reload();
+}
+document.addEventListener("visibilitychange", ()=>{ if(document.hidden) ocultaDesde = Date.now(); else { ocultaDesde = 0; acordar(); } });
+setInterval(()=>{
+  const agora = Date.now();
+  if(agora - ultimoPulso > 3*60*1000) adormecer().then(()=>{ if(!document.hidden) acordar(); }); // o computador dormiu
+  else if(ocultaDesde && agora - ocultaDesde > SONO_MS) adormecer();
+  ultimoPulso = agora;
+}, 30*1000);
+
 /* ======================= EVENTOS ======================= */
 // Acesso só leitura: estas ações gravam alguma coisa, então ficam bloqueadas (e escondidas pelo CSS body.ro).
 const RO_BLOQ = new Set(["addOpt","addOptOk","addPessoa","bulkApply","bulkDelete","confirmDel","contact","delLead","editMetas","fillSample","import","newLead","salvarPessoas","saveContact","saveDetail","selectMode","selVisible","selSemDono","gfPresetSave","gfPresetDel"]);
