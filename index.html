@@ -267,6 +267,9 @@ td input[type=checkbox], th input[type=checkbox]{accent-color:var(--accent); wid
 .rate{display:inline-flex; align-items:center; gap:6px;}
 .rate .mini{width:46px; height:6px; border-radius:4px; background:var(--surface-3); overflow:hidden; display:inline-block;}
 .rate .mini span{display:block; height:100%; background:var(--accent);}
+body.ro [data-act="addOpt"],body.ro [data-act="addPessoa"],body.ro [data-act="bulkApply"],body.ro [data-act="bulkDelete"],body.ro [data-act="delLead"],body.ro [data-act="editMetas"],body.ro [data-act="fillSample"],body.ro [data-act="import"],body.ro [data-act="newLead"],body.ro [data-act="salvarPessoas"],body.ro [data-act="saveContact"],body.ro [data-act="saveDetail"],body.ro [data-act="contact"],body.ro [data-act="selectMode"],body.ro [data-act="gfPresetSave"],body.ro [data-act="gfPresetDel"],body.ro .plus{display:none !important;}
+body.ro [data-ps],body.ro #np-nome,body.ro #np-papel,body.ro #np-nivel,body.ro #np-time,body.ro #np-acesso,body.ro #np-email{pointer-events:none; opacity:.6;}
+body.ro .card{cursor:pointer;}
 .role{font-size:10.5px; padding:1px 6px; border-radius:99px; background:var(--surface-3); color:var(--ink-dim); margin-left:6px;}
 .role.sdr{background:var(--accent-soft); color:var(--accent);}
 .period{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto;}
@@ -804,7 +807,7 @@ async function loadAll(){
   SNAP.set("cfg", js(cfgObj()));
 }
 let filaGravacao = Promise.resolve();
-function saveDB(){ filaGravacao = filaGravacao.then(gravar).catch(e=>{ console.error(e); toast("Não consegui salvar no banco. Confira a internet e tente de novo."); }); }
+function saveDB(){ if(S.ro) return; filaGravacao = filaGravacao.then(gravar).catch(e=>{ console.error(e); toast("Não consegui salvar no banco. Confira a internet e tente de novo."); }); }
 async function gravar(){
   const ops = [];
   const dif = (k, v, ref, data) => { const j = js(v); if(SNAP.get(k)!==j){ ops.push([ref, data]); SNAP.set(k, j); } };
@@ -990,6 +993,7 @@ function garantirAnalise(vends){
 }
 // O resultado do mês (gráfico de evolução do Dashboard) é registrado quando alguém da gestão abre o Hub.
 function gravarHistoricoDoMes(){
+  if(S.ro) return;
   const mk = iso(TODAY).slice(0,7); let recuperado = 0, reativado = 0, primeiros = 0;
   DB.clients.forEach(c=>{ if(c.stage==="ganho" && (c.dtEtapa||"").startsWith(mk)){ if(c.pipe==="risco") recuperado += Number(c.valor)||0; else if(c.pipe==="inativo") reativado += Number(c.valor)||0; } });
   DB.leads.forEach(l=>{ if(l.stage==="ganho" && (l.dtGanho||"").startsWith(mk)) primeiros += Number(l.valor)||0; });
@@ -1187,7 +1191,7 @@ function renderNav(){
   $("#nav").innerHTML = h;
   $("#crumb").textContent = isCarteira(S.view) ? "Carteira de clientes" : VIEW_LABEL[S.view];
   $("#monthLbl").textContent = MONTH_LABEL;
-  $("#userLbl").textContent = S.identNome || "";
+  $("#userLbl").textContent = (S.identNome || "") + (S.ro ? " (só leitura)" : "");
   renderSyncChip();
 }
 function agendaLateCount(){ const t = iso(TODAY); const r = viewerRole(); return (r==="sdr"?[]:DB.clients.filter(c=>podeVer(c.vend))).concat(visibleLeads()).filter(i=>i.prox && i.prox<t && !stageOf(pkOfItem(i),i.stage).end).length; }
@@ -1940,6 +1944,7 @@ function setOwner(it, id){
 /* ---------- Mover etapa ---------- */
 function requestMove(id, stageK){
   const it = findItem(id); if(!it) return;
+  if(S.ro){ avisoLeitura(); return; }
   const pk = pkOfItem(it);
   if(it.stage===stageK) return;
   if(travado(it)){ toast("Este cliente está sendo acompanhado na Pipeline de Retenção neste mês. Atualize por lá; o Hub copia de hora em hora."); return; }
@@ -1947,7 +1952,7 @@ function requestMove(id, stageK){
   const st = stageOf(pk, stageK);
   if(st.needs || PIPES[pk].kind==="client") openGate(it, pk, st); else { doMove(it, pk, stageK); save(); }
 }
-function canEdit(it){ return !travado(it) && podeVer(ownerOf(it)); }
+function canEdit(it){ return !S.ro && !travado(it) && podeVer(ownerOf(it)); }
 function doMove(it, pk, k, extra={}){
   const st = stageOf(pk,k);
   const from = stageOf(pk,it.stage).label;
@@ -2883,7 +2888,7 @@ function renderDistribuicao(){
 function slugId(t){ return norm(t).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,50); }
 const PAPEIS = [["gestor","Gestão"],["lider","Líder"],["vendedor","Vendedor"],["sdr","Prospector (SDR)"],["reativador","Reativador"]];
 const NIVEIS = ["","Ouro","Prata","Bronze","Júnior","Líder","Supervisor","Gerente"];
-const ACESSOS = [["total","Todas as carteiras"],["equipe","Própria + equipe"],["propria","Só a própria"]];
+const ACESSOS = [["total","Todas as carteiras"],["leitura","Visão geral (só leitura)"],["equipe","Própria + equipe"],["propria","Só a própria"]];
 function renderPessoas(){
   const times = Array.from(new Set(DB.people.map(p=>p.time).filter(Boolean).concat(["Prospecção"]))).sort();
   const ordem = {gestor:0, lider:1, vendedor:2, reativador:3, sdr:4};
@@ -3180,6 +3185,11 @@ const gfKey = () => isCarteira(S.view) ? "carteira" : S.view; // as três abas d
 Object.defineProperty(S, "gf", { get(){ const k = gfKey(); return S.gfv[k] || (S.gfv[k] = gfEmpty()); }, set(v){ S.gfv[gfKey()] = v; } });
 
 /* ======================= EVENTOS ======================= */
+// Acesso só leitura: estas ações gravam alguma coisa, então ficam bloqueadas (e escondidas pelo CSS body.ro).
+const RO_BLOQ = new Set(["addOpt","addOptOk","addPessoa","bulkApply","bulkDelete","confirmDel","contact","delLead","editMetas","fillSample","import","newLead","salvarPessoas","saveContact","saveDetail","selectMode","selVisible","selSemDono","gfPresetSave","gfPresetDel"]);
+function avisoLeitura(){ toast("Seu acesso é só de leitura: dá para consultar tudo, mas não alterar."); }
+document.addEventListener("submit", e=>{ if(S.ro && e.target.id!=="lgForm"){ e.preventDefault(); e.stopImmediatePropagation(); avisoLeitura(); } }, true);
+document.addEventListener("dragstart", e=>{ if(S.ro){ e.preventDefault(); e.stopImmediatePropagation(); } }, true);
 document.addEventListener("click", e=>{
   const t = e.target;
   const gp = $("#gfpop");
@@ -3189,6 +3199,7 @@ document.addEventListener("click", e=>{
   const a = t.closest("[data-act]");
   if(a){
     const act = a.dataset.act;
+    if(S.ro && RO_BLOQ.has(act)){ avisoLeitura(); return; }
     if(act==="close"){ closeModal(); return; }
     if(act==="closeNotice"){ S.noticeClosed = true; lsSet("hub_notice_base2","1"); render(); return; }
     if(act==="layout"){ S.layout[S.view] = a.dataset.v; render(); return; }
@@ -3308,7 +3319,7 @@ function identidade(){ try{ return JSON.parse(localStorage.getItem(IDENT_KEY)||"
 function resolverAcesso(email){
   const e = String(email||"").trim().toLowerCase(); if(!e) return null;
   const p = DB.people.find(p=>(p.email||"").toLowerCase()===e);
-  if(p) return p.acesso==="total" ? "gestor" : p.id;
+  if(p) return (p.acesso==="total" || p.acesso==="leitura") ? "gestor" : p.id;
   if((DB.gestores||[]).map(x=>x.toLowerCase()).includes(e)) return "gestor";
   return null;
 }
@@ -3327,6 +3338,9 @@ function telaLogin(msg){
 }
 async function entrar(id, acc){
   S.identNome = id.nome; S.identEmail = id.email; S.identAcc = acc; S.viewer = acc;
+  // Acesso "Visão geral (só leitura)": enxerga tudo como a gestão, mas não grava nada.
+  const pe = DB.people.find(p=>(p.email||"").toLowerCase()===String(id.email||"").trim().toLowerCase());
+  S.ro = !!(pe && pe.acesso==="leitura"); document.body.classList.toggle("ro", S.ro);
   $("#main").innerHTML = `<div class="panel" style="text-align:center;padding:40px;color:var(--ink-faint)">Carregando a carteira…</div>`;
   try{ await carregarClientes(); }catch(e){ console.error(e); toast("Não consegui carregar a carteira de clientes."); }
   ouvir(); render();
