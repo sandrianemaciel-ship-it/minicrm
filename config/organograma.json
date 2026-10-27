@@ -1,5 +1,5 @@
 {
-  "_comentario": "Organograma comercial do Hub. acesso: total | equipe | propria. O id segue o nome como vem do Qlik; alias cobre outras grafias. Depois de editar aqui, aumente ORGANOGRAMA_V no index.html para a página regravar.",
+  "_comentario": "Organograma comercial do Hub. acesso: total | leitura (visão geral, sem editar) | equipe | propria. O id segue o nome como vem do Qlik; alias cobre outras grafias. Depois de editar aqui, aumente ORGANOGRAMA_V no index.html para a página regravar.",
   "pessoas": [
     {
       "id": "rodrigo-velho",
@@ -9,6 +9,15 @@
       "time": "Gerência Comercial",
       "acesso": "total",
       "email": "rodrigo.velho@dellamed.com.br"
+    },
+    {
+      "id": "thiago-gotardo",
+      "nome": "Thiago Gotardo",
+      "papel": "gestor",
+      "nivel": "",
+      "time": "Gerência Comercial",
+      "acesso": "leitura",
+      "email": "thiago.gotardo@dellamed.com.br"
     },
     {
       "id": "marco-ribeiro",
