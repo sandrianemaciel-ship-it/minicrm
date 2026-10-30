@@ -193,6 +193,7 @@ td input[type=checkbox], th input[type=checkbox]{accent-color:var(--accent); wid
 .mt-bar{height:6px; background:var(--surface-3); border-radius:4px; overflow:hidden;} .mt-bar i{display:block; height:100%;}
 .mt-team{margin:0 0 12px;} .mt-team summary{cursor:pointer; font-size:13px;} .mt-team table{margin-top:10px;} .mt-team tfoot th{text-align:left;} .mt-team .r{text-align:right;}
 .an-wrap{display:flex; flex-direction:column; gap:10px; margin:8px 0 14px;} .an-yoy{display:flex; gap:18px; align-items:center; flex-wrap:wrap; background:var(--surface-2); border-radius:10px; padding:10px 12px;} .an-yoy small{display:block; color:var(--ink-faint); font-size:11px;} .an-yoy b{font-variant-numeric:tabular-nums;}
+.cli-cell{display:flex; align-items:center; justify-content:space-between; gap:24px;} .cli-cell > div:first-child{min-width:200px;} .fin-mini{display:flex; gap:14px; font-size:12px; color:var(--ink-dim); white-space:nowrap;} .fin-mini .ok{color:var(--good);} .fin-mini .neg{color:var(--bad);}
 .an-wrap .ok{color:var(--good);} .an-wrap .neg{color:var(--bad);} .an-fin{display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px;} .an-t{font-weight:600; font-size:13px;} .an-t small{font-weight:400; color:var(--ink-faint);} .an-tab td,.an-tab th{font-size:12px;} .an-tab .r{text-align:right;} .an-cross{margin:0; padding-left:18px; font-size:12.5px; display:flex; flex-direction:column; gap:4px;}
 .ger-filtros{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:flex-end; margin-bottom:12px;} .ger-filtros label{display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; font-weight:600; min-width:170px; flex:1 1 170px;} .ger-filtros select{text-transform:none; letter-spacing:0; font-weight:400;}
 .kpi2-grid.ger-kpis{grid-template-columns:repeat(4,1fr); margin-bottom:8px;} @media (max-width:860px){ .kpi2-grid.ger-kpis{grid-template-columns:repeat(2,1fr);} }
@@ -888,7 +889,7 @@ function idsVisiveis(){
 }
 // O robô grava o conteúdo do pacote como texto (campo "dados"); "itens" fica para pacotes antigos.
 function itensPacote(o, vazio){ try{ return o.dados ? JSON.parse(o.dados) : (o.itens || vazio); }catch(e){ console.error(e); return vazio; } }
-const resumoAnalise = a => a ? { pot: a.pot||null, dia: a.dia||null } : null;
+const resumoAnalise = a => a ? { pot: a.pot||null, dia: a.dia||null, fin: a.fin||null } : null;
 function cliDoPacote(o){ const c = {...o}; const id = c._id; delete c._id; c.cod = c.cod || id; c.id = "c"+id; return c; }
 function cliDoDoc(d){ const o = d.data(); Object.keys(o).forEach(k=>{ o[k] = toMs(o[k]); }); o.analise = resumoAnalise(o.analise); o.cod = o.cod || d.id; o.id = "c"+d.id; return o; }
 let salvarCacheT = null;
@@ -972,7 +973,12 @@ async function carregarLeads(){
 // Análise comercial completa (mix, insight, série mensal): pacotes próprios, baixados só quando precisa (DB.anal).
 const anCarregado = new Set(); const anCarregando = new Map();
 function analiseDe(c){ if(!c) return null; const id = String(c.id||"").slice(1); return (DB.anal||{})[id] || c.analise || null; }
-function analiseCompleta(c){ const a = analiseDe(c); return !!(a && (a.mix || a.serie || a.fin)); }
+function analiseCompleta(c){ const a = analiseDe(c); return !!(a && (a.per || a.mix || a.serie)); } // o resumo do pacote tem só pot, dia e fin
+// Situação financeira (Pasta Mestre) em uma linha, para a lista de clientes.
+function finMini(it){
+  const f = (analiseDe(it)||{}).fin; if(!f) return "";
+  return `<div class="fin-mini"><span>Situação financeira: <b class="${/liberado/i.test(f.sit||"")?"ok":"neg"}">${esc(f.sit||"—")}</b></span><span>Limite: <b>${money(f.lim)}</b>${f.venc?` · vence ${fd(f.venc)}`:""}</span><span>Carteira: <b>${money(f.cart)}</b></span>${f.vencido>0?`<span>Inadimplente: <b class="neg">${money(f.vencido)}</b></span>`:""}</div>`;
+}
 function garantirAnalise(vends){
   const pac = DB.pac; if(!S.modoPacotes || !pac || !pac.anIndice) return Promise.resolve(false);
   const falta = [...new Set(vends)].filter(v=>!anCarregado.has(v) && pac.anIndice[v]);
@@ -1879,7 +1885,7 @@ function renderList(pk, list){
   h += rows.map(it=>{
     const st = stageOf(pk,it.stage);
     return `<tr class="click" data-open="${it.id}">${g?`<td><input type="checkbox" data-sel="${it.id}"${S.selected.has(it.id)?" checked":""} aria-label="Selecionar"></td>`:""}
-      <td><b>${esc(it.cli||it.empresa)}</b><br><span style="color:var(--ink-faint)">${isLead?esc(it.contato):"Cód "+it.cod}</span></td>
+      <td>${isLead?`<b>${esc(it.empresa)}</b><br><span style="color:var(--ink-faint)">${esc(it.contato)}</span>`:`<div class="cli-cell"><div><b>${esc(it.cli)}</b><br><span style="color:var(--ink-faint)">Cód ${it.cod}</span></div>${finMini(it)}</div>`}</td>
       <td><span class="stage-pill"><i style="background:${st.color}"></i>${st.label}</span></td>
       <td>${esc(nameOf(ownerOf(it)))}</td>
       ${isLead?`<td><span class="temp ${temperatura(it)}">${TEMP[temperatura(it)].l}</span></td><td>${esc(it.origem)}</td><td class="num">${fd(it.dtEntrada)}</td>`:`<td>${esc(it.seg)}</td><td class="num">${fd(it.dtUltFat)}</td><td class="num">${fd(it.dtInat)}</td><td class="num">${fd(it.dtEtapa)}</td>`}
