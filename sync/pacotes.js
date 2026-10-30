@@ -37,7 +37,7 @@ function montar(clientesDocs, analises){
     const o = plano(d.data); o._id = d.id;
     const an = analises ? analises.get(d.id) : null;
     const leg = an || o.analise || null;
-    o.analise = leg ? { pot: leg.pot || null, dia: leg.dia || null } : null; // só o resumo; o resto vai no pacote de análise
+    o.analise = leg ? { pot: leg.pot || null, dia: leg.dia || null, fin: leg.fin || null } : null; // só o resumo (com a situação financeira, que aparece na lista); o resto vai no pacote de análise
     const v = slug(o.vend);
     (porVend.get(v) || porVend.set(v, []).get(v)).push(o);
     if(an) (anPorVend.get(v) || anPorVend.set(v, []).get(v)).push([d.id, an]);
