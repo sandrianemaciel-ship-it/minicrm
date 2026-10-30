@@ -3014,7 +3014,7 @@ function confirmAddRow(row){
 /* ======================= CABEÇALHO DE FILTROS (igual ao da Pipeline de Retenção, vale para todas as pastas) ======================= */
 const CUR_MK = iso(TODAY).slice(0,7);
 const UFS_BR = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
-function gfEmpty(){ return {mes:CUR_MK, dtinat:[], periodo:[], periodoR:{de:"",ate:""}, rapidos:[], etapa:[], acao:[], time:[], vend:[], status:[], seg:[], uf:[], ofensor:[]}; }
+function gfEmpty(){ return {mes:CUR_MK, dtinat:[], periodo:[], periodoR:{de:"",ate:""}, rapidos:[], etapa:[], acao:[], time:[], vend:[], status:[], seg:[], uf:[], ofensor:[], fin:[]}; }
 function mkLabel(mk){ const [y,m] = mk.split("-").map(Number); return MONTHS[m-1].charAt(0).toUpperCase()+MONTHS[m-1].slice(1)+"/"+y; }
 // Mês (base): de outubro/2026 em diante (até dezembro/2027, como a Pipeline de Retenção).
 // Ajustes pedidos só para Dashboard e Gestão de contatos (as outras pastas mantêm o cabeçalho anterior).
@@ -3042,6 +3042,7 @@ function gfValues(k, it){
     case "seg": return it.seg || "—";
     case "uf": return it.uf || "—";
     case "ofensor": return it.ofensor || "—";
+    case "fin": { if(it.empresa!==undefined) return null; const f = (analiseDe(it)||{}).fin; return (f && f.sit) || "—"; }
   }
 }
 function gfOk(it, skip){
@@ -3049,10 +3050,11 @@ function gfOk(it, skip){
   if(!gfSoProsp() && g.status.length && g.status.some(v=>!Object.values(STATUS_L).includes(v))) g.status = g.status.filter(v=>Object.values(STATUS_L).includes(v));
   if(g.mes!==CUR_MK && it.empresa===undefined && it.pipe==="risco") return false;
   if(S.view==="carteira" && skip!=="rapidos" && (g.rapidos||[]).length && it.empresa===undefined){ for(const r of g.rapidos){ const q = RAPIDOS.find(x=>x.k===r); if(q && !q.test(it)) return false; } }
-  for(const k of ["dtinat","periodo","acao","time","vend","etapa","status","seg","uf","ofensor"]){
+  for(const k of ["dtinat","periodo","acao","time","vend","etapa","status","fin","seg","uf","ofensor"]){
     if(k===skip || !g[k].length) continue;
     if(k==="periodo" && !novoCab()) continue;
     if(k==="etapa" && gfSoProsp()) continue;
+    if(k==="fin" && gfSoProsp()) continue;
     if(k==="dtinat" && semDtInat()) continue;
     const v = gfValues(k, it); if(v==null || !g[k].includes(v)) return false;
   }
@@ -3087,12 +3089,15 @@ function gfOptions(k){
   else if(k==="seg") opts = segList().map(s=>({v:s,l:s}));
   else if(k==="uf") opts = UFS_BR.map(u=>({v:u,l:u}));
   else if(k==="ofensor") opts = OFENSORES.concat(["—"]).map(o=>({v:o, l:o==="—"?"Sem ofensor":o}));
+  else if(k==="fin"){ const extra = Object.keys(cnt).filter(v=>v!=="—" && !FIN_SIT.includes(v)).sort(); opts = FIN_SIT.concat(extra, ["—"]).map(v=>({v, l:v==="—"?"Sem informação":v, c: v==="Liberado"?"var(--good)":v==="—"?"var(--ink-faint)":"var(--bad)"})); }
   opts.forEach(o=> o.n = cnt[o.v]||0);
   if(["seg","uf"].includes(k)) opts.sort((a,b)=> (b.n>0)-(a.n>0) || 0);
   return opts;
 }
+// Status financeiro (Pasta Mestre do Qlik), na ordem pedida; outros valores que vierem do Qlik entram depois.
+const FIN_SIT = ["Liberado","Sem Limite de Crédito","Limite de Crédito Vencido","Inadimplente"];
 function gfFieldsFor(){
-  let f = GF_FIELDS.filter(([k])=> !(k==="dtinat" && semDtInat()));
+  let f = GF_FIELDS.filter(([k])=> !(k==="dtinat" && semDtInat()) && !(k==="fin" && gfSoProsp()));
   if(!gfSoProsp()){ const i = f.findIndex(([k])=>k==="status"); f = f.slice(0,i).concat([["etapa","Etapa do funil"]]).concat(f.slice(i)); }
   return f;
 }
@@ -3113,12 +3118,12 @@ const RAPIDOS = [
   {k:"sem60", l:"Clientes sem pedidos há 60 dias", test:sem60},
   {k:"inad", l:"Clientes inadimplentes no momento", test:c=> (c.inad||0) > 0}
 ];
-const GF_FIELDS = [["mes","Mês (base)"],["dtinat","Data de inativação"],["periodo","Período"],["acao","Ação"],["time","Time"],["vend","Vendedor"],["status","Status"],["seg","Segmento"],["uf","UF"],["ofensor","Ofensor"],["marc","Marcadores"]];
+const GF_FIELDS = [["mes","Mês (base)"],["dtinat","Data de inativação"],["periodo","Período"],["acao","Ação"],["time","Time"],["vend","Vendedor"],["status","Status"],["fin","Status financeiro"],["seg","Segmento"],["uf","UF"],["ofensor","Ofensor"],["marc","Marcadores"]];
 // Status = carteira do cliente (ativos, inativos, inativam no mês). Etapa do funil = etapa do cartão.
 // Na Prospecção e na Distribuição só existem leads: lá o Status continua sendo a etapa do lead.
 const STATUS_L = {ativos:"Clientes ativos", inativos:"Clientes inativos", risco:"Clientes que inativam no mês"};
 function gfSoProsp(){ return S.view==="prospeccao" || S.view==="distribuicao"; }
-function gfActiveCount(){ const g = S.gf; return (S.view==="carteira" ? (g.rapidos||[]).length : 0) + (!gfSoProsp() && (g.etapa||[]).length ? 1 : 0) + ["dtinat","periodo","acao","time","vend","status","seg","uf","ofensor"].reduce((a,k)=>a+(g[k].length && !(k==="dtinat" && semDtInat()) && !(k==="periodo" && !novoCab())?1:0),0) + (!novoCab() && (g.periodoR.de||g.periodoR.ate) ? 1 : 0); }
+function gfActiveCount(){ const g = S.gf; return (S.view==="carteira" ? (g.rapidos||[]).length : 0) + (!gfSoProsp() && (g.etapa||[]).length ? 1 : 0) + ["dtinat","periodo","acao","time","vend","status","fin","seg","uf","ofensor"].reduce((a,k)=>a+((g[k]||[]).length && !(k==="dtinat" && semDtInat()) && !(k==="fin" && gfSoProsp()) && !(k==="periodo" && !novoCab())?1:0),0) + (!novoCab() && (g.periodoR.de||g.periodoR.ate) ? 1 : 0); }
 function presetsKey(){ return S.viewer; }
 function myPresets(){ DB.presets = DB.presets || {}; return DB.presets[presetsKey()] || (DB.presets[presetsKey()] = []); }
 function renderGfBar(){
@@ -3189,7 +3194,7 @@ function gfApply(){ render(); const pop = $("#gfpop"); if(pop && pop.dataset.k!=
 // Cada pasta tem o seu próprio cabeçalho de filtros: o que se escolhe numa pasta não muda as outras.
 S.gfv = {};
 const gfKey = () => isCarteira(S.view) ? "carteira" : S.view; // as três abas da carteira dividem o mesmo cabeçalho
-Object.defineProperty(S, "gf", { get(){ const k = gfKey(); return S.gfv[k] || (S.gfv[k] = gfEmpty()); }, set(v){ S.gfv[gfKey()] = v; } });
+Object.defineProperty(S, "gf", { get(){ const k = gfKey(); const o = S.gfv[k] || (S.gfv[k] = gfEmpty()); if(!o.fin) o.fin = []; return o; }, set(v){ S.gfv[gfKey()] = v; } });
 
 /* ======================= ECONOMIA DE LEITURAS ======================= */
 // Uma aba esquecida aberta (ou um computador que dormiu) não pode "acordar" baixando tudo o que mudou nesse tempo:
