@@ -3104,6 +3104,7 @@ const semPedAnt = c => c.pedMesAnt!=null ? !(c.pedMesAnt > 0) : pd(c.dtUltFat) <
 const sem60 = c => days(TODAY, pd(c.dtUltFat)) >= 60;
 const adimp = c => !(c.inad > 0);
 const RAPIDOS = [
+  {k:"comPedMes", l:"Clientes com pedido no mês", test:c=> !semPedMes(c)}, // pedido emitido no mês (Qlik) ou cartão em "ganho"
   {k:"semPedMes", l:"Clientes sem pedidos no mês atual", test:semPedMes},
   {k:"adSemPedMes", l:"Clientes adimplentes sem pedido no mês atual", test:c=> adimp(c) && semPedMes(c)},
   {k:"adSemPedAnt", l:"Clientes adimplentes sem pedido no mês anterior", test:c=> adimp(c) && semPedAnt(c)},
